@@ -17,6 +17,7 @@ import { TerrainShadowBaker } from './world/shadowBake';
 import worldCfg from './config/world.json';
 import { DriveSession } from './game/driveSession';
 import { buildBody } from './vehicle/vehicleMeshes';
+import { AudioSystem } from './audio/audioSystem';
 
 export class App {
   renderer!: THREE.WebGLRenderer;
@@ -34,6 +35,8 @@ export class App {
   shadowBaker!: TerrainShadowBaker;
   fly!: FlyCam;
   drive: DriveSession | null = null;
+  audio = new AudioSystem();
+  vehName = 'patrol';
   flyMode = false;
   time = 0;
   frameCount = 0;
@@ -55,6 +58,9 @@ export class App {
     atmo.uTerrShadow.value = white;
     atmo.uObjShadow.value = white;
     this.input = new Input(this.canvas);
+    // audio may only start after a user gesture (browser autoplay policy)
+    const startAudio = () => void this.audio.start().catch((e) => console.warn('audio start failed', e));
+    for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, startAudio, { passive: true });
     if (P.tod !== undefined) this.tod.hour = P.tod;
     this.tod.update();
 
@@ -90,6 +96,7 @@ export class App {
     if (P.mode !== 'fly' && !P.bench) {
       status('vehicle');
       const veh = P.veh || 'patrol';
+      this.vehName = veh;
       this.drive = new DriveSession(this.assets.data, this.terrain, this.camera, q, veh, { x: sx, z: sz, heading: P.heading ?? sp.heading_deg }, (sim) => (P.box ? null : buildBody(sim.spec, veh)));
       this.scene.add(this.drive.group);
     } else this.flyMode = true;
@@ -193,6 +200,7 @@ export class App {
     if (this.bench) this.runBench(dt);
     else if (this.drive && !this.flyMode) this.drive.update(dt, this.input, this.renderer);
     else this.fly.update(dt, this.input, (x, z) => this.assets.data.heightAt(x, z));
+    this.audio.update(dt, this.drive && !this.flyMode ? this.drive.sim : null, this.vehName, this.camera, this.drive && !this.flyMode ? this.drive.cam.mode : 'fly');
 
     this.tod.update();
     atmo.uTime.value = this.time;
@@ -218,7 +226,9 @@ export class App {
         `calls ${r.calls}  tris ${(r.triangles / 1000).toFixed(0)}k  nodes ${this.terrain.stats.nodes}\n` +
         `trees ${this.props.stats.ghaf}  shrubs ${this.props.stats.shrub}  tufts ${this.props.stats.tuft}  shadow bake ${this.shadowBaker.bakeMs.toFixed(1)} ms\n` +
         `pos ${c.x.toFixed(0)}, ${c.y.toFixed(0)}, ${c.z.toFixed(0)}  sun ${this.tod.elevationDeg.toFixed(1)}°` +
-        (this.drive ? `\nphysics ${this.drive.physMs.toFixed(2)} ms (${this.drive.steps} steps)  deform upload ${this.drive.deformTex.uploadMs.toFixed(2)} ms ${this.drive.deformTex.uploadedTexels} tx  spray ${this.drive.spray.spawned}` : '');
+        (this.drive ? `\nphysics ${this.drive.physMs.toFixed(2)} ms (${this.drive.steps} steps)  deform upload ${this.drive.deformTex.uploadMs.toFixed(2)} ms ${this.drive.deformTex.uploadedTexels} tx  spray ${this.drive.spray.spawned}` : '') +
+        `
+audio ${this.audio.ctx ? this.audio.ctx.state : 'waiting for a click/key'}  update ${this.audio.updateMs.toFixed(2)} ms`;
     }
   }
 

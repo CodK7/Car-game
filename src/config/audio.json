@@ -1,0 +1,57 @@
+{
+  "_note": "Procedural audio tuning. All sounds are synthesised (no samples). Optional sample slots: put a CC0/own file URL in 'samples' and it replaces that layer.",
+  "master": 0.8,
+  "samples": { "engine": { "url": null, "rpm": 3000 }, "wind": { "url": null }, "impact": { "url": null } },
+  "engines": {
+    "I6": {
+      "_firing": "inline-6, firing order 1-5-3-6-2-4, one cylinder every 120 deg; exhaust manifolds 1-3 and 4-6 (ASSUMPTION: typical I6 split)",
+      "cylinders": 6,
+      "firingOrder": [1, 5, 3, 6, 2, 4],
+      "bankOf": [0, 0, 0, 1, 1, 1],
+      "bankFormants": [[115, 520, 1350], [128, 560, 1500]],
+      "bankPan": [-0.08, 0.08],
+      "pulseWidthMs": 2.6,
+      "cylVar": 0.06,
+      "jitter": 0.05,
+      "knock": 0.05,
+      "mech": 0.05,
+      "crackle": 1.0,
+      "limiterPops": 1.0,
+      "intake": 0.22,
+      "gain": 0.55
+    },
+    "V8": {
+      "_firing": "cross-plane V8, firing order 1-8-7-3-6-5-4-2, one cylinder every 90 deg; odd cylinders = bank A, even = bank B (ASSUMPTION: Toyota UR/VD order and numbering). Each bank fires unevenly (the V8 burble).",
+      "cylinders": 8,
+      "firingOrder": [1, 8, 7, 3, 6, 5, 4, 2],
+      "bankOf": [0, 1, 0, 1, 0, 1, 0, 1],
+      "bankFormants": [[92, 430, 1150], [104, 470, 1300]],
+      "bankPan": [-0.15, 0.15],
+      "pulseWidthMs": 3.2,
+      "cylVar": 0.05,
+      "jitter": 0.04,
+      "knock": 0.35,
+      "mech": 0.07,
+      "crackle": 0.15,
+      "limiterPops": 0.4,
+      "intake": 0.18,
+      "gain": 0.6
+    }
+  },
+  "turbo": { "whineHzMin": 2400, "whineHzMax": 7800, "whineGain": 0.05, "hissGain": 0.04, "flutterHz": 21, "flutterGain": 0.18, "flutterTime": 0.55 },
+  "vehicles": {
+    "patrol": { "engine": "I6", "flutter": 1.0, "whineLow4L": 0.05 },
+    "lc70": { "engine": "V8", "flutter": 0.3, "whineLow4L": 0.06 }
+  },
+  "surface": {
+    "scrubGain": 0.35, "scrubHzLoose": 700, "scrubHzHard": 2200, "scrubPsiRef": 32,
+    "sprayGain": 0.22, "sprayHz": 3800,
+    "rollGain": 0.08,
+    "gearWhineTeeth": 31, "gearWhineGain": 0.05,
+    "impactMinN": 4000, "impactGain": 0.9,
+    "bottomMinSpeed": 0.6, "bottomGain": 0.7
+  },
+  "wind": { "base": 0.05, "speedGain": 0.0045, "gustDepth": 0.6, "gustPeriod": 7.5, "lowpassHz": 900 },
+  "reverb": { "_note": "sparse open desert: a few ground/dune reflections and a short tail, no cave", "send": 0.12, "tail": 0.55, "taps": 7, "early": [0.011, 0.023, 0.041, 0.067, 0.093, 0.13, 0.19] },
+  "spatial": { "refDistance": 6, "maxDistance": 900, "rolloff": 1.1, "hfDampHzAt100m": 3000, "speedOfSound": 343, "maxRemoteVoices": 4, "maxOneShots": 8 }
+}

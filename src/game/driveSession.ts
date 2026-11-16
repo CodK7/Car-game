@@ -64,7 +64,7 @@ export class DriveSession {
     if (this.hud) this.hud.style.display = 'block';
     if (this.helpEl)
       this.helpEl.textContent =
-        'W/S drive/brake · A/D steer · Space handbrake · 1/2/3 = 2H/4H/4L · L/K lockers · [ ] tyre psi · C camera · V shake · M auto/manual · R reset';
+        'Click = sound · W/S drive/brake · A/D steer · Space handbrake · 1/2/3 = 2H/4H/4L · L/K lockers · [ ] tyre psi · C camera · V shake · M auto/manual · R reset';
     tun('Vehicle', this.sim, 'mass', 1200, 4000, 10);
     tun('Vehicle', this.sim.spec.tyre, 'mu_sand', 0.3, 1.2, 0.01);
     tun('Vehicle', this.sim.spec.tyre, 'mu_hard', 0.5, 1.4, 0.01);

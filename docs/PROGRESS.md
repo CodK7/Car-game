@@ -11,7 +11,7 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | W1 — world | DONE | tests green, screenshots `docs/evidence/w1_*.png`, FPS below |
 | W2 — sand | DONE | tests green (29), `docs/evidence/w2_*.png`, benchmark in DECISIONS W2.1 |
 | W3 — vehicle | DONE | tests green (43), `docs/evidence/w3_*.png`, metrics table below |
-| W4 — audio | not started | |
+| W4 — audio | DONE | tests green (50), `tests/measure_audio.mjs`, demos `docs/evidence/w4_demo_*.wav` |
 | W5 — graphics | not started | |
 | W6 — gameplay | not started | |
 
@@ -75,6 +75,34 @@ Synchronous render timing in the browser pane (`__app.measure()`, medium): 7.5 m
 - Secondary dunes still read as fairly regular wrinkles from the air (GIS detail layer; needs `detail.*` re-tune + 7-min rebuild — not done).
 - Opposition-effect hotspot shows faint radial ripple streaks from high altitude.
 - Houses are plain boxes; power-line wires are not drawn.
+
+## W4 — audio (DONE)
+
+All sound is procedural Web Audio (no samples). Click or press a key once to start it (browser autoplay policy). `?debug` panel → **Audio** (master volume, mute, offline CPU benchmark), **Audio layers** (gain per layer), **Audio audition** (override rpm/load/throttle/boost/speed/slip/loose/psi/cut/4L, buttons: belly impact, bottom-out, blow-off flutter, V8 drive-by with HRTF + Doppler).
+
+| Layer | How |
+|---|---|
+| Engine | AudioWorklet (`src/audio/engineDsp.ts`): crank angle from rpm, cylinders fire in firing order (I6 1-5-3-6-2-4, cross-plane V8 1-8-7-3-6-5-4-2), raised-cosine exhaust pulses into per-bank formant resonators, banks panned → V8 burble, I6 smooth. Diesel knock, mechanical whirr, intake roar ∝ throttle·rpm |
+| Limiter / overrun | fuel cut skips combustion + random exhaust pops, pop when fuel returns; overrun crackle when lifting above 2200 rpm (petrol strong, diesel weak) |
+| Turbo | whine 2.4–7.8 kHz with boost, hiss, blow-off flutter on a sharp lift (LC70 turbo; Patrol is NA until a turbo part in W6) |
+| Tyres / sand | scrub (band noise ∝ slip, pitch from loose + pressure), rolling rumble ∝ speed, spray hiss ∝ loose-sand slip |
+| Driveline / chassis | straight-cut gear whine in 4L and reverse from driveshaft speed; belly impact and bump-stop clunk one-shots (synthesised buffers, 8-voice pool) |
+| Environment | wind with two-LFO gusts ∝ speed, cockpit view muffles outside (low-pass 2.6 kHz); sparse open-air reverb (7 early reflections + 0.55 s thin tail, generated IR) |
+| Spatial | remote vehicles: HRTF PannerNode, inverse rolloff, distance HF damping (≈3 kHz at 100 m), Doppler on the engine pitch, nearest-4 voice limit |
+
+**Measured** (`node tests/measure_audio.mjs`, real Edge window, UHD 630 PC):
+
+| What | Result |
+|---|---|
+| AudioContext after one click | `running`, 48 kHz, base latency 10 ms, both vehicles, no console errors |
+| Main-thread `audio.update()` | 0.1–0.2 ms / frame (with a remote voice) |
+| Audio-thread CPU, full graph (player engine + remote V8 HRTF + 4 noise layers + whine + reverb), offline 10 s | **55 ms per second = 5.5 % of one core** |
+| Click check (max sample jump / mean jump) on the scripted demo | 5.3–6.4 (no outliers); DSP unit test with step changes every 0.25 s: 14 (noise-limited), peak < 0.3 |
+| Node DSP alone (V8 + turbo) | 10.9 ms per second of audio |
+
+Listening demos (8 s: rev sweeps, lift-off flutter/crackle, limiter bounce, a remote V8, tyre/wind beds): `docs/evidence/w4_demo_I6.wav`, `w4_demo_V8.wav`.
+
+**Open issues (W4):** the sound is tuned by numbers and spectra only — **not verified by ear** (no listener overnight); levels between layers may need a mix pass. Sample slots (`audio.json → samples`) are wired but untested with real files.
 
 ## W3 — vehicle (DONE)
 

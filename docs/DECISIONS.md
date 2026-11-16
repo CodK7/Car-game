@@ -57,6 +57,15 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - **W3.9 Bodies** are original procedural low-poly shapes (extruded side profile with arch cut-outs + boxes), not copies of any real model; no logos. ~2–4 k triangles each, 8 draw calls. LHD cockpit (Oman drives on the right).
 - **W3.10 Cameras**: chase (mouse / right-stick orbit, eases back), bonnet and cockpit from the body layout; FOV widens with speed; impact shake toggle (V, or debug panel).
 
+## W4 — audio
+
+- **W4.1 Engine = firing-order pulse synthesis in an AudioWorklet**, not granular samples: the brief forbids copyrighted samples and wants firing-order awareness; pulses through bank formants give the I6/V8 character with ~5 % CPU. The DSP is pure TS so Vitest checks firing rate, bank unevenness, clicks and cost in Node.
+- **W4.2 Firing orders** (ASSUMPTION): I6 1-5-3-6-2-4 (the common inline-6 order, Nissan TB48 included); V8 1-8-7-3-6-5-4-2 with odd/even banks (Toyota UR/VD family). Formant frequencies are by ear-free estimate (pipe lengths 1.5–2.5 m) — ASSUMPTION.
+- **W4.3 Doppler is done in the synth** (pitch factor from radial velocities), because PannerNode no longer applies Doppler in current browsers. HF damping by a distance-driven low-pass (ASSUMPTION ≈3 kHz at 100 m).
+- **W4.4 Reverb**: a generated sparse impulse (7 early reflections, short thin tail, send 0.12). Open desert has almost no reverberation; a long hall IR would sound like a cave.
+- **W4.5 Autoplay**: AudioContext is created on the first pointer/key/touch; `?mute` keeps master at 0 (used by automated screenshots).
+- **W4.6 CPU measurement** = OfflineAudioContext render of the full graph timed on the main thread (Chrome/Edge have no stable live audio-thread load API).
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).
@@ -65,3 +74,4 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 4. Default time of day 16:24 (golden-hour-ish, Nov sun); change with `?tod=12.3`.
 5. Patrol mass 2500 kg instead of the prompt's ~2.2 t (sources say 2410–2640 kg).
 6. Both vehicles default to automatic (the real LC79 is manual-only).
+7. Audio is judged by tests/spectra only (no one to listen overnight); demo WAVs saved for the morning.
