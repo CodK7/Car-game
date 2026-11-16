@@ -70,9 +70,11 @@ export function stepSink(s: WheelSink, inp: WheelSinkInput, dt: number, p: SinkP
   const loose = Math.min(Math.max(inp.loose, 0), 1);
   if (inp.load <= 1) {
     // wheel in the air: ground no longer pressed, dug hole stays in the deformation grid (caller), state relaxes
-    s.static = 0;
+    // unloaded (airborne, or a momentary unload while the suspension extends): sand is plastic, the rut stays;
+    // the static part fades slowly instead of snapping to 0 (snapping caused a groove/suspension limit cycle)
+    s.static = Math.max(0, s.static - s.static * Math.min(1, dt * 2));
     s.dug = Math.max(0, s.dug - p.settleRate * dt);
-    s.depth = s.dug;
+    s.depth = s.static + s.dug;
     s.crr = 0;
     s.grip = 1;
     s.stuck = false;

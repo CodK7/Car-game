@@ -10,7 +10,7 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | B — reuse GIS | DONE | `Tools/Web/export_web.py` → `public/terrain/*`; `CLAUDE.md` rewritten for web |
 | W1 — world | DONE | tests green, screenshots `docs/evidence/w1_*.png`, FPS below |
 | W2 — sand | DONE | tests green (29), `docs/evidence/w2_*.png`, benchmark in DECISIONS W2.1 |
-| W3 — vehicle | not started | |
+| W3 — vehicle | DONE | tests green (43), `docs/evidence/w3_*.png`, metrics table below |
 | W4 — audio | not started | |
 | W5 — graphics | not started | |
 | W6 — gameplay | not started | |
@@ -76,6 +76,43 @@ Synchronous render timing in the browser pane (`__app.measure()`, medium): 7.5 m
 - Opposition-effect hotspot shows faint radial ripple streaks from high altitude.
 - Houses are plain boxes; power-line wires are not drawn.
 
+## W3 — vehicle (DONE)
+
+Run: `npm run dev` → http://localhost:5173/ (`?veh=lc70` for the pickup, `?box` for the old placeholder body). Keys: W/S, A/D, Space handbrake, 1/2/3 = 2H/4H/4L, L/K rear/front locker, [ ] tyre psi (8–40), M auto/manual, Q/E shift (manual), C camera (chase/bonnet/cockpit), V camera shake on/off, R reset. Gamepad: RT/LT analog throttle/brake, left stick steer, right stick orbit.
+
+**Metrics** (`npm test` → `tests/vehicle.test.ts`, written to `tests/tmp/w3_metrics.json`; pure-TS sim, 120 Hz):
+
+| Metric | Patrol-class wagon (4.8 I6, auto) | LC70-class pickup (4.5 V8 TD, auto) | Real reference |
+|---|---|---|---|
+| 0–100 km/h | 12.1 s | 16.5 s | Y61 4.8 ≈ 11–12 s; LC79 V8 ≈ 14–17 s (press tests) |
+| Top speed | 184 km/h | 152 km/h | ≈ 180 / 150–160 (speed limited) |
+| Braking 100–0, hard ground | 45.1 m (3.76 s) | 43.7 m (3.80 s) | 40–48 m typical for ladder-frame 4×4 on A/T tyres |
+| 30° compacted slope, 15 s from standstill | 4L: +56 m; 2H: rolls back 80 m | 4L: +19.6 m; 2H: rolls back 108 m | — |
+| Rolling sinkage on loose sand 12 / 35 psi | 5.4 / 10.7 cm | 5.3 / 10.4 cm | airing down halves sinkage (field rule of thumb) |
+| Contact patch length 12 / 35 psi | 25 / 12 cm | 19 / 10 cm | — |
+| Tilt-table rollover | 42° (SSF → 44.6°) | 42° (SSF → 43.0°) | static stability factor angle, minus suspension roll |
+| 20° side slope at 20 km/h, 8 s | drift 1.4 m, upright | drift 0.04 m, upright | — |
+| Cross-axle pit (lc70, 2H) | — | open diff: stuck (−9.9 m, slides back); rear locker: +17.4 m | — |
+| Heat soak: 150 s full load up 12° loose | coolant 112 °C, power ×0.89 | — | — |
+| 60 s random inputs on dunes | min up.y 0.91, no NaN | — | — |
+
+**Browser (real Edge window 1600×900, Low preset, real terrain at the spawn corridor):** `node tests/shots.mjs w3_patrol "quality=low&veh=patrol" tests/views/w3.json` (and `w3_lc70`).
+
+| Shot | Patrol FPS | LC70 FPS |
+|---|---|---|
+| `*_body_front.png` (parked) | 60 | 54 |
+| `*_body_rear.png` | 62 | 59 |
+| `*_drive_chase.png` (auto-drive on the dunes, spray + ruts) | 68 | 68 |
+| `*_drive_bonnet.png` | 69 | 68 |
+| `*_drive_cockpit.png` | 68 | 68 |
+
+(vsync cap 75 Hz.) `npm run smoke` passes (fly, drive, drive-medium; no console errors).
+
+**Open issues (W3):**
+- Full throttle in 2H on steep compacted slopes spins the open rear axle and rolls back (by design: no traction control); 4H/4L climb.
+- Bodies are simple low-poly extrusions (original designs); no doors/interior detail beyond dash, wheel and cabin tub.
+- LC70 at 35 psi, part throttle in deep loose sand shows a small periodic load oscillation (~0.6 s) — unverified in the browser at length.
+
 ## W2 — interactive sand (DONE)
 
 Run: `npm run dev` → http://localhost:5173/?debug (drive mode is the default; `?veh=lc70`, `?deform=1024`). Keys in the on-screen help line.
@@ -95,4 +132,5 @@ Per-frame cost while driving (debug overlay): physics 0.1–0.5 ms, deformation 
 **Open issues (W2):**
 - At idle on a slope the car creeps backwards slowly (~0.3 m/s braked on 20°) because the tyre model is regularised at low speed. Fix planned in W3 (static-friction anchor).
 - Full throttle in 2H on a 20° *compacted* slope breaks traction and rolls back (open diff, tyre falloff past peak) — plausible but harsh; revisit with W3 tyre tuning.
-- Placeholder box body only; real procedural bodies come in W3.
+- Placeholder box body only; real procedural bodies come in W3. → fixed in W3.
+- Braked creep on slopes → fixed in W3 (static-friction anchor).

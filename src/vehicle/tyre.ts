@@ -42,7 +42,8 @@ export function tyreState(t: TyreSpec, psi: number, loose: number, load: number,
   // vertical deflection ≈ load / (pressure * k): contact patch length from chord of the deflected circle
   const pk = (p * PSI_TO_KPA + 55) * 1000; // Pa, same carcass model as the sink model
   const area = Math.max(load, 0) / pk; // m²
-  const patchLen = clamp(area / (t.width * 0.85), 0.05, t.radius * 1.4);
+  // ASSUMPTION: effective patch width ≈ 0.6 × section width at road pressure (rounded shoulders)
+  const patchLen = clamp(area / (t.width * 0.6), 0.05, t.radius * 1.2);
   const defl = clamp((patchLen * patchLen) / (8 * t.radius), 0, t.sidewall_m * 0.6);
   const softness = clamp((pn - p) / pn, -0.5, 0.75); // + when aired down
   const muHard = t.mu_hard * (1 - 0.06 * Math.max(softness, 0));

@@ -34,6 +34,7 @@ export interface VehicleSpec {
   engine: {
     idleRpm: number; limiterRpm: number; redlineRpm: number; inertia: number; frictionNm: number; engineBrakeNm: number;
     torqueCurve: number[][]; turbo: { lag_s: number; naFrac: number; spoolRpm: number } | null;
+    thermal?: { ambientC: number; normalC: number; heatPerSecFull: number; coolPerSec: number; derateStartC: number; derateFullC: number; derateMax: number };
   };
   gearbox: { ratios: number[]; reverse: number; final: number; lowRange: number; shiftTime: number; autoUpRpm: number[]; autoDownRpm: number[]; clutchTorque: number; stallRpm: number; converterTR: number };
   driveline: { efficiency: number; rearLocker: boolean; frontLocker: boolean };
@@ -95,10 +96,16 @@ export class Wheel {
   sink: WheelSink = newWheelSink();
   prevPoint = new Vector3();
   hasPrev = false;
+  /** static-friction anchor for a braked wheel at (almost) standstill; removes regularised-tyre creep */
+  anchor = new Vector3();
+  anchored = false;
+  /** low-passed tyre deflection used for the rolling radius (instantaneous load feedback would oscillate) */
+  deflF = 0;
   // linearisation scratch
   c0 = 0;
   k0 = 0;
   driveTorque = 0;
+  staticLoad: number;
   constructor(front: boolean, left: boolean, susp: AxleSusp, spec: VehicleSpec) {
     this.front = front;
     this.left = left;
@@ -108,6 +115,8 @@ export class Wheel {
     this.width = spec.tyre.width;
     this.inertia = spec.tyre.inertia;
     this.pressurePsi = spec.tyre.nominalPsi;
+    const share = front ? spec.frontWeightFrac : 1 - spec.frontWeightFrac;
+    this.staticLoad = (spec.mass * 9.81 * share) / 2;
   }
 }
 
@@ -143,10 +152,14 @@ export class VehicleSim {
   gear = 1; // -1 reverse, 0 neutral, 1..n
   autoGearbox = true;
   shiftTimer = 0;
+  gearHold = 0;
   clutchEngage = 0;
   clutchSlip = 0;
   lockup = false;
   engineTorque = 0;
+  /** coolant temperature (°C) and resulting power factor: heat soak on long full-load climbs */
+  engineTempC = 90;
+  powerFactor = 1;
   mode: DriveMode = '4H';
   rearLock = false;
   frontLock = false;
@@ -254,6 +267,22 @@ export class VehicleSim {
     return g * gb.final * (this.mode === '4L' ? gb.lowRange : 1);
   }
 
+  private peakPowerW = 0;
+  private computePeakPower(): number {
+    let p = 1;
+    for (const [r, t] of this.spec.engine.torqueCurve) p = Math.max(p, (t * r * Math.PI) / 30);
+    return p;
+  }
+
+  /** full-load torque from the published curve (no boost lag, no heat derate) */
+  curveTorque(rpm: number): number {
+    const c = this.spec.engine.torqueCurve;
+    if (rpm <= c[0][0]) return c[0][1] * Math.max(rpm / c[0][0], 0);
+    for (let i = 1; i < c.length; i++)
+      if (rpm <= c[i][0]) return c[i - 1][1] + ((c[i][1] - c[i - 1][1]) * (rpm - c[i - 1][0])) / (c[i][0] - c[i - 1][0]);
+    return c[c.length - 1][1];
+  }
+
   engineTorqueAt(rpm: number, thr: number): number {
     const e = this.spec.engine;
     const c = e.torqueCurve;
@@ -266,9 +295,16 @@ export class VehicleSim {
           T = c[i - 1][1] + (c[i][1] - c[i - 1][1]) * t;
           break;
         }
-    const boostF = e.turbo ? e.turbo.naFrac + (1 - e.turbo.naFrac) * this.boost : 1;
+    // turbo: without boost the engine is limited to naFrac of its peak torque (the low-rpm part of the curve is already
+    // naturally aspirated, so it is not scaled down)
+    if (e.turbo) {
+      let pk = 0;
+      for (const p of c) pk = Math.max(pk, p[1]);
+      T = Math.min(T, pk * (e.turbo.naFrac + (1 - e.turbo.naFrac) * this.boost));
+    }
+    const boostF = 1;
     const brake = e.engineBrakeNm * Math.min(1, rpm / e.limiterRpm);
-    return T * boostF * thr - brake * (1 - thr) - e.frictionNm * Math.min(1, rpm / 1000);
+    return T * boostF * this.powerFactor * thr - brake * (1 - thr) - e.frictionNm * Math.min(1, rpm / 1000);
   }
 
   step(dt: number): void {
@@ -324,9 +360,36 @@ export class VehicleSim {
         w.fx = w.fy = 0;
         continue;
       }
-      tyreForce(w.tyre, w.load, w.sink.grip, w.omega * w.radius, w.vLong, w.vLat, 2.0, 2.5, tmpF);
-      w.fx = tmpF[0];
-      w.fy = tmpF[1];
+      const held = inp.brake > 0.05 || (!w.front && inp.handbrake > 0.05);
+      if (held && Math.abs(w.vLong) < 0.4 && Math.abs(w.vLat) < 0.4) {
+        // static friction: spring-damper to an anchor in the contact plane, capped at the friction limit (slides beyond)
+        if (!w.anchored) {
+          w.anchor.copy(w.point);
+          w.anchored = true;
+        }
+        const dpos = tmpV.copy(w.point).sub(w.anchor);
+        dpos.addScaledVector(w.normal, -dpos.dot(w.normal));
+        const k = 60 * w.load + 1000;
+        const c = 2 * Math.sqrt(k * this.mass * 0.25);
+        let fx = -k * dpos.dot(w.fwd) - c * w.vLong;
+        let fy = -k * dpos.dot(w.right) - c * w.vLat;
+        const lim = w.tyre.mu * w.sink.grip * w.load;
+        const fm = Math.hypot(fx, fy);
+        if (fm > lim) {
+          fx *= lim / fm;
+          fy *= lim / fm;
+          // slide: move the anchor so the spring sits at the limit
+          w.anchor.copy(w.point).addScaledVector(w.fwd, fx / k).addScaledVector(w.right, fy / k);
+        }
+        w.fx = fx;
+        w.fy = fy;
+        w.omega = 0;
+      } else {
+        w.anchored = false;
+        tyreForce(w.tyre, w.load, w.sink.grip, w.omega * w.radius, w.vLong, w.vLat, 2.0, 2.5, tmpF);
+        w.fx = tmpF[0];
+        w.fy = tmpF[1];
+      }
       const F = tmpV.copy(w.fwd).multiplyScalar(w.fx).addScaledVector(w.right, w.fy);
       // tyre forces act through a solid axle: apply at ~axle height (roll centre) rather than at the patch
       tmpV2.copy(w.point).addScaledVector(w.normal, w.radius * 0.75);
@@ -377,7 +440,9 @@ export class VehicleSim {
       w.groundSpeed = Math.hypot(w.vLong, w.vLat);
       stepSink(w.sink, { load: w.load, slipSpeed: Math.abs(w.slipSpeed), groundSpeed: w.groundSpeed, pressurePsi: w.pressurePsi, loose: w.loose, width: w.width, radius: w.radius }, dt);
       if (this.deform) {
-        const a = 0.62 * w.radius;
+        // extend the stamp ahead/behind to where the tyre circle reaches the rut depth, so the wheel never wedges on its own groove wall
+        const dd = Math.max(w.sink.depth, 0);
+        const a = Math.max(0.62 * w.radius, Math.sqrt(Math.max(0, 2 * w.radius * dd - dd * dd)) + 0.12);
         const hx = w.fwd.x, hz = w.fwd.z, hl = Math.hypot(hx, hz) || 1;
         const ux = (hx / hl) * a, uz = (hz / hl) * a;
         const ax = (w.hasPrev ? w.prevPoint.x : w.point.x) - ux, az = (w.hasPrev ? w.prevPoint.z : w.point.z) - uz;
@@ -404,7 +469,7 @@ export class VehicleSim {
   private suspension(w: Wheel, dt: number): void {
     const M = tmpA.copy(w.mount).applyMatrix3(this.R).add(this.pos);
     const D = tmpB.copy(this.up).negate();
-    const r = w.radius - w.tyre.deflection * 0.5;
+    const r = w.radius - w.deflF * 0.5;
     // tyre forward projected horizontally, for sampling the ground along the circle
     const fx = this.fwd.x * Math.cos(w.steer) + this.right.x * Math.sin(w.steer);
     const fz = this.fwd.z * Math.cos(w.steer) + this.right.z * Math.sin(w.steer);
@@ -481,7 +546,8 @@ export class VehicleSim {
       const vp = tmpV2.copy(this.angVel).cross(v).add(this.vel);
       w.vLong = vp.dot(w.fwd);
       w.vLat = vp.dot(w.right);
-      tyreState(this.spec.tyre, w.pressurePsi, w.loose, w.load, w.tyre);
+      tyreState(this.spec.tyre, w.pressurePsi, w.loose, Math.min(w.load, w.staticLoad * 2.5), w.tyre);
+      w.deflF += (w.tyre.deflection - w.deflF) * 0.04;
     } else {
       w.right.copy(w.fwd).cross(this.up).normalize();
       w.vLong = this.vel.dot(w.fwd);
@@ -523,7 +589,8 @@ export class VehicleSim {
       if (!this.limiterCut) this.limiterEvents++;
       this.limiterCut = true;
     } else if (rpm < e.limiterRpm - 180) this.limiterCut = false;
-    const idleThr = Math.min(0.45, Math.max(0, (e.idleRpm * 1.04 - rpm) / 300));
+    // idle governor: adds fuel below idle, up to full fuel when the engine is being lugged towards a stall
+    const idleThr = Math.min(1, Math.max(0, (e.idleRpm * 1.05 - rpm) / 120));
     let thr = this.limiterCut ? 0 : inp.throttle;
     if (this.shiftTimer > 0) thr *= 0.15;
     this.throttleEff = Math.max(thr, idleThr);
@@ -532,25 +599,44 @@ export class VehicleSim {
       this.boost += (target - this.boost) * Math.min(1, dt / e.turbo.lag_s);
     }
     this.engineTorque = this.engineTorqueAt(rpm, this.throttleEff);
+    const th = e.thermal;
+    if (th) {
+      // ASSUMPTION (W3.6): lumped coolant model. Heat ∝ engine power fraction, cooling ∝ (T − thermostat) × airflow.
+      const pMax = this.peakPowerW || (this.peakPowerW = this.computePeakPower());
+      const pFrac = Math.max(0, (this.engineTorque * this.engineOmega) / pMax);
+      const air = 0.4 + 0.6 * Math.min(1, Math.abs(this.speed) / 20);
+      const amb = th.ambientC;
+      let dT = pFrac * th.heatPerSecFull - th.coolPerSec * Math.max(0, this.engineTempC - th.normalC) * air;
+      if (this.engineTempC < th.normalC) dT += 0.05 * (1 + pFrac); // warm-up towards the thermostat
+      this.engineTempC = Math.max(amb, this.engineTempC + dT * dt);
+      this.powerFactor = 1 - th.derateMax * smooth(th.derateStartC, th.derateFullC, this.engineTempC);
+    }
 
     // ---- gearbox (auto logic) ----
     if (this.shiftTimer > 0) this.shiftTimer -= dt;
+    if (this.gearHold > 0) this.gearHold -= dt;
     const ratio = this.totalRatio();
     const rearAvg = (W[2].omega + W[3].omega) / 2;
     if (this.autoGearbox && this.gear > 0 && this.shiftTimer <= 0) {
-      const rpmIn = (Math.abs(rearAvg * ratio) * 30) / Math.PI;
+      // output-shaft speed as a TCU sees it, clamped to ground speed (-15 % / +15 % +2 rad/s) so wheelspin or wheel hop does not trigger shifts
+      const vOut = Math.abs(this.speed) / W[2].radius;
+      const rpmIn = (Math.min(Math.max(Math.abs(rearAvg), vOut * 0.85), vOut * 1.15 + 2) * Math.abs(ratio) * 30) / Math.PI;
       const up = lerp(gb.autoUpRpm[0], gb.autoUpRpm[1], inp.throttle);
       const dn = lerp(gb.autoDownRpm[0], gb.autoDownRpm[1], inp.throttle);
       const rs = gb.ratios;
       // hysteresis: only shift if the new gear lands inside the band (prevents hunting)
       const rpmUp = this.gear < rs.length ? (rpmIn * rs[this.gear]) / rs[this.gear - 1] : 0;
       const rpmDn = this.gear > 1 ? (rpmIn * rs[this.gear - 2]) / rs[this.gear - 1] : Infinity;
-      if (rpmIn > up && this.gear < rs.length && rpmUp > dn * 1.1) {
+      // minimum time in gear (no hunting), except a kickdown when the engine is lugging far below the band
+      const canShift = this.gearHold <= 0;
+      if (canShift && rpmIn > up && this.gear < rs.length && (rpmUp > dn * 1.1 || rpmIn > e.limiterRpm * 0.95)) {
         this.gear++;
         this.shiftTimer = gb.shiftTime;
-      } else if (rpmIn < dn && this.gear > 1 && rpmDn < up * 0.85) {
+        this.gearHold = 1.2;
+      } else if ((canShift || rpmIn < dn * 0.6) && rpmIn < dn && this.gear > 1 && rpmDn < up * 0.85) {
         this.gear--;
         this.shiftTimer = gb.shiftTime * 0.7;
+        this.gearHold = 1.2;
       }
     }
 
@@ -626,23 +712,42 @@ export class VehicleSim {
     if (this.autoGearbox && !this.lockup && ratio !== 0 && engage > 0) {
       // torque converter: pump torque = (ω_e / K)², K from the stall speed; turbine torque = TR(sr) · pump torque
       const ws = (gb.stallRpm * Math.PI) / 30;
-      const K2 = (ws * ws) / Math.max(this.engineTorqueAt(gb.stallRpm, 1), 50);
+      // K-factor from the rated (full-boost) torque at the stall speed: a converter property, not the current boost state
+      const K2 = (ws * ws) / Math.max(this.curveTorque(gb.stallRpm), 50);
+      const TRs = gb.converterTR;
+      // returns [engine torque, rear-shaft torque] from the converter at (ω_e, ω_turbine)
+      const conv = (we: number, wt: number, out: number[]) => {
+        let Tp: number, TR: number;
+        if (Math.abs(wt) <= we) {
+          const x = we > 1 ? Math.abs(wt) / we : 0;
+          const cap01 = x < 0.85 ? 1 : Math.max(0, (1 - x) / 0.15);
+          Tp = ((we * we) / K2) * cap01;
+          TR = x < 0.85 ? TRs - ((TRs - 1) * x) / 0.85 : 1;
+          if (wt < 0) TR = TRs; // turbine stalled/driven backwards (rolling back): full stall multiplication
+        } else {
+          // overrun: turbine drives the pump (engine braking through the converter)
+          const x = we / Math.abs(wt);
+          Tp = -((wt * wt) / K2) * Math.min(1, (1 - x) / 0.15) * 0.6 * Math.sign(wt);
+          TR = 1;
+        }
+        out[0] = -Tp;
+        out[1] = eta * ratio * Tp * TR;
+        return out;
+      };
+      // implicit: linearise around the current state (explicit integration diverges when the wheels spin up)
       const we = this.engineOmega;
-      let Tp: number, TR: number;
-      if (Math.abs(wt) <= we) {
-        const x = Math.abs(sr);
-        const cap01 = x < 0.85 ? 1 : Math.max(0, (1 - x) / 0.15);
-        Tp = ((we * we) / K2) * cap01;
-        TR = x < 0.85 ? gb.converterTR - ((gb.converterTR - 1) * x) / 0.85 : 1;
-        if (wt < 0) TR = 1; // turbine driven backwards (rolling back): plain coupling
-      } else {
-        // overrun: turbine drives the pump (engine braking through the converter)
-        const x = we / Math.abs(wt);
-        Tp = -((wt * wt) / K2) * Math.min(1, (1 - x) / 0.15) * 0.6 * Math.sign(wt);
-        TR = 1;
-      }
-      b[0] -= dt * Tp;
-      b[1] += dt * eta * ratio * Tp * TR;
+      const c0 = conv(we, wt, CV0);
+      const hE = 0.5, hT = 0.5;
+      const cE = conv(we + hE, wt, CV1);
+      const dE0 = (cE[0] - c0[0]) / hE, dE1 = (cE[1] - c0[1]) / hE;
+      const cT = conv(we, wt + hT, CV1);
+      const dT0 = ((cT[0] - c0[0]) / hT) * ratio, dT1 = ((cT[1] - c0[1]) / hT) * ratio;
+      b[0] += dt * c0[0];
+      b[1] += dt * c0[1];
+      A[0][0] -= dt * Math.min(dE0, 0);
+      A[0][1] -= dt * dT0;
+      A[1][0] -= dt * dE1;
+      A[1][1] -= dt * Math.min(dT1, 0);
       this.clutchSlip = Math.min(1, Math.max(0, 1 - sr));
     } else if (ratio !== 0 && cap > 0) {
       const dw = this.engineOmega - ratio * q[1];
@@ -665,7 +770,7 @@ export class VehicleSim {
     A[1][1] += 1e-3;
     solve(A, b, m);
     for (let k = 0; k < m; k++) q[k] += b[k];
-    this.engineOmega = Math.max(q[0], (e.idleRpm * 0.5 * Math.PI) / 30);
+    this.engineOmega = Math.min(Math.max(q[0], (e.idleRpm * 0.5 * Math.PI) / 30), (e.limiterRpm * 1.25 * Math.PI) / 30);
     for (let i = 0; i < 4; i++) {
       let om = 0;
       for (let k = 1; k < m; k++) om += J[i][k] * q[k];
@@ -722,6 +827,8 @@ const tmpR = new Matrix3();
 const tmpA = new Vector3();
 const tmpB = new Vector3();
 const tmpQ = new Quaternion();
+const CV0 = [0, 0];
+const CV1 = [0, 0];
 const JM: number[][] = [0, 1, 2, 3].map(() => new Array(6).fill(0));
 const AM: number[][] = [0, 1, 2, 3, 4, 5].map(() => new Array(6).fill(0));
 const BV: number[] = new Array(6).fill(0);

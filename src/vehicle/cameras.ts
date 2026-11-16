@@ -1,5 +1,6 @@
 // Vehicle cameras: chase (orbitable with mouse drag / right stick), bonnet, cockpit. Speed-based FOV, optional shake.
 import * as THREE from 'three';
+import { bodyLayout } from './vehicleMeshes';
 import type { VehicleSim } from './vehicleSim';
 import type { Input } from '../core/input';
 
@@ -11,6 +12,8 @@ export class VehicleCamera {
   fovBase = 62;
   fovSpeedGain = 14; // extra degrees at 140 km/h
   shake = true;
+  /** keep a scripted orbit offset (screenshots / photo mode) instead of easing back behind the car */
+  orbitHold = false;
   distance = 7.5;
   height = 2.4;
   private yawOff = 0;
@@ -51,7 +54,7 @@ export class VehicleCamera {
       const [lx, ly] = input.padLook();
       this.yawOff -= lx * dt * 2.5;
       this.pitchOff = Math.min(1.2, Math.max(-0.1, this.pitchOff + ly * dt * 1.5));
-      if (!input.dragging && Math.abs(lx) < 0.01) this.yawOff *= Math.exp(-dt * 0.8);
+      if (!this.orbitHold && !input.dragging && Math.abs(lx) < 0.01) this.yawOff *= Math.exp(-dt * 0.8);
       if (input.wheel) this.distance = Math.min(30, Math.max(4, this.distance * (1 + input.wheel * 0.001)));
       // follow the body heading (smoothed)
       const f = this.tv.copy(v.fwd);
@@ -74,8 +77,8 @@ export class VehicleCamera {
     } else {
       // bonnet / cockpit: rigidly attached to the body
       const s = v.spec;
-      const zF = -s.wheelbase * (1 - s.frontWeightFrac);
-      const local = this.mode === 'bonnet' ? new THREE.Vector3(0, -s.cgHeight + s.body.height - 0.15, zF - 0.2) : new THREE.Vector3(-0.38, -s.cgHeight + s.body.height - 0.55, zF + 1.15);
+      const L = bodyLayout(s);
+      const local = (this.mode === 'bonnet' ? L.eyeBonnet : L.eyeCockpit).clone();
       local.applyQuaternion(v.quat).add(v.pos);
       cam.position.copy(local);
       cam.quaternion.copy(v.quat);

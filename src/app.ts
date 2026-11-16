@@ -16,6 +16,7 @@ import { Props } from './world/props';
 import { TerrainShadowBaker } from './world/shadowBake';
 import worldCfg from './config/world.json';
 import { DriveSession } from './game/driveSession';
+import { buildBody } from './vehicle/vehicleMeshes';
 
 export class App {
   renderer!: THREE.WebGLRenderer;
@@ -89,7 +90,7 @@ export class App {
     if (P.mode !== 'fly' && !P.bench) {
       status('vehicle');
       const veh = P.veh || 'patrol';
-      this.drive = new DriveSession(this.assets.data, this.terrain, this.camera, q, veh, { x: sx, z: sz, heading: P.heading ?? sp.heading_deg });
+      this.drive = new DriveSession(this.assets.data, this.terrain, this.camera, q, veh, { x: sx, z: sz, heading: P.heading ?? sp.heading_deg }, (sim) => (P.box ? null : buildBody(sim.spec, veh)));
       this.scene.add(this.drive.group);
     } else this.flyMode = true;
 

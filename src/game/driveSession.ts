@@ -64,7 +64,7 @@ export class DriveSession {
     if (this.hud) this.hud.style.display = 'block';
     if (this.helpEl)
       this.helpEl.textContent =
-        'W/S drive/brake · A/D steer · Space handbrake · 1/2/3 = 2H/4H/4L · L/K lockers · [ ] tyre psi · C camera · M auto/manual · R reset';
+        'W/S drive/brake · A/D steer · Space handbrake · 1/2/3 = 2H/4H/4L · L/K lockers · [ ] tyre psi · C camera · V shake · M auto/manual · R reset';
     tun('Vehicle', this.sim, 'mass', 1200, 4000, 10);
     tun('Vehicle', this.sim.spec.tyre, 'mu_sand', 0.3, 1.2, 0.01);
     tun('Vehicle', this.sim.spec.tyre, 'mu_hard', 0.5, 1.4, 0.01);
@@ -107,6 +107,7 @@ export class DriveSession {
     this.time += dt;
     this.ctl.update(dt, input, sim);
     if (input.hit('KeyC') || input.padHit(9)) this.cam.cycle();
+    if (input.hit('KeyV')) this.cam.shake = !this.cam.shake;
     if (input.hit('KeyR') || input.padHit(8)) this.recover();
     // fixed-step physics
     const t0 = performance.now();

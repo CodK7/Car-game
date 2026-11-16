@@ -2,6 +2,7 @@
   "_doc": "Vehicle presets. Figures cited in docs/DECISIONS.md (W3.1). Values marked in _assumptions are estimates. Body frame: +x right, +y up, -z forward. Wheels: FL, FR, RL, RR.",
   "patrol": {
     "label": "Desert wagon (Patrol-class, 4.8 L I6 petrol)",
+    "sources": ["auto-data.net Nissan Patrol Y61 4.8 i 24V (245/251 hp): 185 kW @ 4800, 420 Nm @ 3600, kerb 2410-2640 kg", "carexpert.com.au Patrol Y61 specs: wheelbase 2970 mm", "ASSUMPTION: 5-speed auto ratios (RE5R05A family), final 3.9, low range 2.02"],
     "engineLayout": "I6",
     "mass": 2500,
     "cgHeight": 0.82,
@@ -11,7 +12,7 @@
     "trackR": 1.625,
     "body": { "length": 5.05, "width": 1.94, "height": 1.85, "groundClearance": 0.23, "overhangF": 0.86 },
     "inertiaScale": [1.0, 1.0, 1.0],
-    "tyre": { "radius": 0.396, "width": 0.275, "mu_hard": 1.0, "mu_sand": 0.62, "kappaPeak": 0.11, "alphaPeakDeg": 7.5, "nominalPsi": 32, "shapeHard": 1.55, "shapeSand": 1.08, "sidewall_m": 0.19, "inertia": 3.4 },
+    "tyre": { "radius": 0.396, "width": 0.275, "mu_hard": 1.0, "mu_sand": 0.62, "kappaPeak": 0.11, "alphaPeakDeg": 7.5, "nominalPsi": 32, "shapeHard": 1.35, "shapeSand": 1.08, "sidewall_m": 0.19, "inertia": 3.4 },
     "susp": {
       "front": { "travel": 0.24, "spring": 66000, "bump": 4600, "rebound": 7600, "antiRoll": 26000, "bumpStop": 520000 },
       "rear":  { "travel": 0.28, "spring": 50000, "bump": 4000, "rebound": 6800, "antiRoll": 12000, "bumpStop": 520000 }
@@ -19,7 +20,8 @@
     "engine": {
       "idleRpm": 750, "limiterRpm": 5600, "redlineRpm": 5400, "inertia": 0.24, "frictionNm": 22, "engineBrakeNm": 75,
       "torqueCurve": [[600, 230], [1000, 300], [2000, 372], [3000, 410], [3600, 420], [4000, 416], [4800, 375], [5200, 342], [5600, 300], [6000, 230]],
-      "turbo": null
+      "turbo": null,
+      "thermal": { "ambientC": 38, "normalC": 90, "heatPerSecFull": 0.6, "coolPerSec": 0.02, "derateStartC": 105, "derateFullC": 125, "derateMax": 0.35 }
     },
     "gearbox": { "ratios": [3.827, 2.368, 1.519, 1.0, 0.834], "reverse": 2.613, "final": 3.9, "lowRange": 2.02, "shiftTime": 0.35, "autoUpRpm": [2200, 5100], "autoDownRpm": [1100, 2800], "clutchTorque": 900, "stallRpm": 2300, "converterTR": 1.9 },
     "driveline": { "efficiency": 0.87, "rearLocker": true, "frontLocker": false },
@@ -30,6 +32,7 @@
   },
   "lc70": {
     "label": "Desert pickup (LC70-class, 4.5 L V8 turbo-diesel)",
+    "sources": ["Toyota LC79 spec sheet (cms.motuscorp.co.za): 1VD-FTV 151 kW @ 3400, 430 Nm, manual ratios 4.529/2.464/1.490/1.000/0.881, kerb ~2200 kg", "70seriesstore.com 79-series specs guide", "ASSUMPTION: transfer low 2.488, final 4.3, reverse 4.22; real LC79 is manual-only, game defaults to auto"],
     "engineLayout": "V8",
     "mass": 2200,
     "cgHeight": 0.8,
@@ -39,7 +42,7 @@
     "trackR": 1.43,
     "body": { "length": 5.22, "width": 1.87, "height": 1.95, "groundClearance": 0.235, "overhangF": 0.84 },
     "inertiaScale": [1.0, 1.0, 1.0],
-    "tyre": { "radius": 0.389, "width": 0.265, "mu_hard": 1.0, "mu_sand": 0.6, "kappaPeak": 0.11, "alphaPeakDeg": 7.0, "nominalPsi": 35, "shapeHard": 1.55, "shapeSand": 1.08, "sidewall_m": 0.186, "inertia": 3.3 },
+    "tyre": { "radius": 0.389, "width": 0.265, "mu_hard": 1.0, "mu_sand": 0.6, "kappaPeak": 0.11, "alphaPeakDeg": 7.0, "nominalPsi": 35, "shapeHard": 1.35, "shapeSand": 1.08, "sidewall_m": 0.186, "inertia": 3.3 },
     "susp": {
       "front": { "travel": 0.22, "spring": 70000, "bump": 5000, "rebound": 8200, "antiRoll": 30000, "bumpStop": 560000 },
       "rear":  { "travel": 0.2, "spring": 62000, "bump": 5200, "rebound": 7000, "antiRoll": 0, "bumpStop": 560000, "leaf": true, "leafFriction": 700 }
@@ -47,9 +50,10 @@
     "engine": {
       "idleRpm": 700, "limiterRpm": 4000, "redlineRpm": 3800, "inertia": 0.34, "frictionNm": 30, "engineBrakeNm": 120,
       "torqueCurve": [[600, 200], [1000, 330], [1200, 430], [2000, 430], [3200, 430], [3400, 424], [3800, 350], [4000, 300], [4300, 150]],
-      "turbo": { "lag_s": 0.7, "naFrac": 0.55, "spoolRpm": 1100 }
+      "turbo": { "lag_s": 0.7, "naFrac": 0.55, "spoolRpm": 1100 },
+      "thermal": { "ambientC": 38, "normalC": 90, "heatPerSecFull": 0.65, "coolPerSec": 0.02, "derateStartC": 105, "derateFullC": 125, "derateMax": 0.35 }
     },
-    "gearbox": { "ratios": [4.313, 2.33, 1.436, 1.0, 0.838], "reverse": 4.22, "final": 4.3, "lowRange": 2.488, "shiftTime": 0.45, "autoUpRpm": [1700, 3600], "autoDownRpm": [1000, 2100], "clutchTorque": 1000, "stallRpm": 1850, "converterTR": 1.9 },
+    "gearbox": { "ratios": [4.529, 2.464, 1.49, 1.0, 0.881], "reverse": 4.22, "final": 4.3, "lowRange": 2.488, "shiftTime": 0.45, "autoUpRpm": [1700, 3600], "autoDownRpm": [1000, 1750], "clutchTorque": 1000, "stallRpm": 1850, "converterTR": 1.9 },
     "driveline": { "efficiency": 0.86, "rearLocker": true, "frontLocker": true },
     "brakes": { "front": 3600, "rear": 2200, "handbrake": 2200 },
     "steer": { "maxDeg": 33, "speedReduce": 0.55 },

@@ -44,9 +44,24 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - **W2.5 Spray** = instanced quads with analytic ballistic motion in the vertex shader (CPU only writes spawn records in a ring buffer) → cost is O(spawns). Budget per preset, emission fades out between 25–160 m from the camera.
 - **W2.6 Spawn on slopes**: `VehicleSim.reset` aligns the body to the fitted ground plane (was: flat, dropped from above, which pivoted the car on steep dunes).
 
+## W3 — vehicle
+
+- **W3.1 Presets & sources** (also in `src/config/vehicles.json` → `sources`). Patrol-class: TB48DE 185 kW @ 4800 / 420 Nm @ 3600 (auto-data.net Y61 4.8, 245/251 hp), wheelbase 2970 mm (carexpert). Kerb mass set to **2500 kg** — the prompt says "~2.2 t" but published Y61 4.8 wagons weigh 2410–2640 kg, so the source wins (deviation logged). LC70-class: 1VD-FTV 151 kW @ 3400 / 430 Nm, manual ratios 4.529/2.464/1.490/1.000/0.881, kerb ~2200 kg (Toyota LC79 spec sheet). ASSUMPTION: Patrol 5AT ratios (RE5R05A family) and final drives, LC70 transfer 2.488 / final 4.3 / reverse 4.22.
+- **W3.2 Auto by default on both** (the real LC79 is manual-only): easier for keyboard players; `M` switches to manual with clutch/limiter/engine braking.
+- **W3.3 Driveline = implicit solve** of engine + driveshaft + wheels per 120 Hz step (A·Δω = b with the torque-converter and tyre Jacobians). The explicit converter was unstable at high ratios (wheelspin ran away to NaN). Converter: K-factor from the full-load curve at the stall rpm, torque ratio 1.9 at stall (ASSUMPTION), lock-up above 1.25× stall in 2nd+.
+- **W3.4 Tyre pressure model** (ASSUMPTION): vertical stiffness ∝ psi + carcass term; patch length = area / (0.6 × width); sidewall bulge drawn from the static deflection. 8–40 psi.
+- **W3.5 Turbo** = torque limit peak·(NA fraction + (1−NA)·boost), boost follows a first-order lag (ASSUMPTION time constants). Idle governor holds 1.05× idle.
+- **W3.6 Thermal derate** (ASSUMPTION): coolant heats ∝ power fraction, cools ∝ airflow; power falls up to 35 % between 105–125 °C. Long full-load climbs in 38 °C air lose ~10 % after 2.5 min.
+- **W3.7 Braked static anchor**: below 0.4 m/s a braked wheel is held by a spring-damper to its contact point (capped by μ·load), removing the regularised-tyre creep on slopes.
+- **W3.8 TCU shift logic** uses the ground-speed-clamped turbine rpm and a 1.2 s minimum time in gear (wheelspin used to cause 1↔2 hunting).
+- **W3.9 Bodies** are original procedural low-poly shapes (extruded side profile with arch cut-outs + boxes), not copies of any real model; no logos. ~2–4 k triangles each, 8 draw calls. LHD cockpit (Oman drives on the right).
+- **W3.10 Cameras**: chase (mouse / right-stick orbit, eases back), bonnet and cockpit from the body layout; FOV widens with speed; impact shake toggle (V, or debug panel).
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).
 2. Browser tests drive the installed **Edge** through `puppeteer-core` (no browser download). FPS numbers come from a real (non-headless) Edge window on the UHD 630.
 3. Spawn point: interdune corridor at x 1650, z −2350 (south of Al Mintarib, near a track).
 4. Default time of day 16:24 (golden-hour-ish, Nov sun); change with `?tod=12.3`.
+5. Patrol mass 2500 kg instead of the prompt's ~2.2 t (sources say 2410–2640 kg).
+6. Both vehicles default to automatic (the real LC79 is manual-only).

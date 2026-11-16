@@ -1,0 +1,7 @@
+[
+  { "name": "body_front", "tod": 16.4, "wait": 4, "js": "a.drive.cam.orbitHold = true; a.drive.sim.input.brake = 1; a.drive.cam.mode = 'chase'; a.drive.cam.yawOff = 2.5; a.drive.cam.pitchOff = 0.08; a.drive.cam.distance = 7.5;" },
+  { "name": "body_rear", "wait": 2, "js": "a.drive.cam.yawOff = -0.9; a.drive.cam.pitchOff = 0.1; a.drive.cam.distance = 8;" },
+  { "name": "drive_chase", "wait": 8, "js": "a.drive.sim.input.brake = 0; a.drive.cam.orbitHold = false; a.drive.cam.yawOff = 0; a.drive.cam.pitchOff = 0.1; a.drive.cam.distance = 8.5; a.drive.ctl.autoDrive = true;" },
+  { "name": "drive_bonnet", "wait": 4, "js": "a.drive.cam.mode = 'bonnet';" },
+  { "name": "drive_cockpit", "wait": 4, "js": "a.drive.cam.mode = 'cockpit'; console.log('W3 ' + JSON.stringify({ kmh: +(a.drive.sim.speed*3.6).toFixed(1), gear: a.drive.sim.gear, rpm: Math.round(a.drive.sim.engineOmega*30/Math.PI), up: +a.drive.sim.up.y.toFixed(3), temp: +a.drive.sim.engineTempC.toFixed(0) }));" }
+]
