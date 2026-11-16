@@ -1,0 +1,48 @@
+{
+  "sink": {
+    "_doc": "Per-wheel sinkage model. Bekker-style pressure-sinkage z = (p / k)^(1/n); k blends from compacted to loose sand by the loose mask. Dynamic digging from wheel slip. All ASSUMPTION-tuned (see DECISIONS W2.3).",
+    "k_loose_kPa_per_m_n": 3500,
+    "k_compact_kPa_per_m_n": 60000,
+    "n_loose": 1.1,
+    "n_compact": 0.9,
+    "carcass_kPa": 55,
+    "carcassNominalLoad_N": 5500,
+    "maxStatic_m": 0.22,
+    "maxDig_m": 0.62,
+    "digRate": 0.06,
+    "digSlipSpeed_m_s": 1.2,
+    "digLowSpeed_m_s": 2.5,
+    "climbOut": 0.9,
+    "settleRate": 0.35,
+    "crr_hard": 0.012,
+    "crr_hard_per_psi_below_30": 0.0012,
+    "bulldoze": 0.55,
+    "beachedDig_m": 0.28
+  },
+  "deform": {
+    "_doc": "CPU-authoritative deformation height grid, toroidal window following the vehicle, uploaded as an RG16F texture (R = height delta m, G = disturbed 0..1).",
+    "bermRatio": 0.45,
+    "bermWidthOfTyre": 0.55,
+    "reposeDeg": 33,
+    "slumpRate": 6.0,
+    "relaxHz": 15,
+    "relaxRadius_m": 7,
+    "windFillPerMin": 0.04,
+    "disturbedFadePerMin": 0.03,
+    "recentreFrac": 0.22
+  },
+  "particles": {
+    "_doc": "Instanced GPU sand spray, analytic ballistic motion with drag. Budget per quality preset (quality.json particles).",
+    "life_s": [0.5, 1.3],
+    "size_m": [0.03, 0.17],
+    "gravity": 9.81,
+    "drag": 1.6,
+    "spawnPerSlipMeter": 5,
+    "spawnPerSpeed": 0.6,
+    "maxPerWheelPerSec": 900,
+    "lodNear_m": 25,
+    "lodFar_m": 160,
+    "color": [0.80, 0.55, 0.32],
+    "opacity": 0.45
+  }
+}

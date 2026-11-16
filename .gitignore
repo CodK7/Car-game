@@ -12,3 +12,4 @@ __pycache__/
 # GIS pipeline: raw downloads and intermediates are reproducible
 Data/GIS/raw/
 Data/GIS/work/
+tests/tmp/

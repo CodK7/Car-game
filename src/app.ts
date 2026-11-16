@@ -15,6 +15,7 @@ import { buildRoads } from './world/roads';
 import { Props } from './world/props';
 import { TerrainShadowBaker } from './world/shadowBake';
 import worldCfg from './config/world.json';
+import { DriveSession } from './game/driveSession';
 
 export class App {
   renderer!: THREE.WebGLRenderer;
@@ -31,6 +32,8 @@ export class App {
   props!: Props;
   shadowBaker!: TerrainShadowBaker;
   fly!: FlyCam;
+  drive: DriveSession | null = null;
+  flyMode = false;
   time = 0;
   frameCount = 0;
   private last = 0;
@@ -83,6 +86,12 @@ export class App {
     this.camera.position.set(sx, this.assets.data.heightAt(sx, sz) + 25, sz);
     this.fly = new FlyCam(this.camera);
     this.fly.yaw = (-(P.heading ?? sp.heading_deg) * Math.PI) / 180;
+    if (P.mode !== 'fly' && !P.bench) {
+      status('vehicle');
+      const veh = P.veh || 'patrol';
+      this.drive = new DriveSession(this.assets.data, this.terrain, this.camera, q, veh, { x: sx, z: sz, heading: P.heading ?? sp.heading_deg });
+      this.scene.add(this.drive.group);
+    } else this.flyMode = true;
 
     this.quality.onChange = (nq) => this.applyQuality(nq);
     this.applyQuality(q);
@@ -108,11 +117,13 @@ export class App {
     if (cr) cr.textContent = 'DEM © DLR / Airbus (Copernicus) · Map data © OpenStreetMap contributors';
     if (P.bench) this.bench = { t: 0, dur: P.bench, started: false };
     (window as any).__app = this;
+    (window as any).__THREE = THREE; // for measurement scripts (tests/measure_*.mjs)
   }
 
   applyQuality(q: Quality): void {
     this.terrain.setQuality(q);
     this.props?.setQuality(q);
+    this.drive?.setQuality(q);
     this.resize();
   }
 
@@ -174,7 +185,12 @@ export class App {
     this.quality.frame(dt);
     this.input.poll();
 
+    if (this.drive && P.debug && this.input.hit('KeyF')) {
+      this.flyMode = !this.flyMode;
+      if (this.flyMode) this.fly.yaw = this.camera.rotation.y;
+    }
     if (this.bench) this.runBench(dt);
+    else if (this.drive && !this.flyMode) this.drive.update(dt, this.input, this.renderer);
     else this.fly.update(dt, this.input, (x, z) => this.assets.data.heightAt(x, z));
 
     this.tod.update();
@@ -200,8 +216,17 @@ export class App {
         `quality ${this.quality.name}${this.quality.auto ? ' (auto)' : ''}  scale ${this.quality.q.renderScale}\n` +
         `calls ${r.calls}  tris ${(r.triangles / 1000).toFixed(0)}k  nodes ${this.terrain.stats.nodes}\n` +
         `trees ${this.props.stats.ghaf}  shrubs ${this.props.stats.shrub}  tufts ${this.props.stats.tuft}  shadow bake ${this.shadowBaker.bakeMs.toFixed(1)} ms\n` +
-        `pos ${c.x.toFixed(0)}, ${c.y.toFixed(0)}, ${c.z.toFixed(0)}  sun ${this.tod.elevationDeg.toFixed(1)}°`;
+        `pos ${c.x.toFixed(0)}, ${c.y.toFixed(0)}, ${c.z.toFixed(0)}  sun ${this.tod.elevationDeg.toFixed(1)}°` +
+        (this.drive ? `\nphysics ${this.drive.physMs.toFixed(2)} ms (${this.drive.steps} steps)  deform upload ${this.drive.deformTex.uploadMs.toFixed(2)} ms ${this.drive.deformTex.uploadedTexels} tx  spray ${this.drive.spray.spawned}` : '');
     }
+  }
+
+  /** Smoke-test info: vehicle state if driving. */
+  smokeInfo(): Record<string, unknown> {
+    const d = this.drive;
+    if (!d) return { mode: 'fly' };
+    const s = d.sim;
+    return { speed: s.speed, rpm: s.rpm, gear: s.gear, y: s.pos.y, ground: d.ground.heightAt(s.pos.x, s.pos.z), up: s.up.y, finite: Number.isFinite(s.pos.x + s.pos.y + s.pos.z + s.vel.length()) };
   }
 
   /** Scripted fly-through used by ?bench=<seconds>; publishes window.__bench when done. */

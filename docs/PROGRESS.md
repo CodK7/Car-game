@@ -9,7 +9,7 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | A — cleanup | DONE | 970.6 MB freed; "maybe" list below |
 | B — reuse GIS | DONE | `Tools/Web/export_web.py` → `public/terrain/*`; `CLAUDE.md` rewritten for web |
 | W1 — world | DONE | tests green, screenshots `docs/evidence/w1_*.png`, FPS below |
-| W2 — sand | not started | |
+| W2 — sand | DONE | tests green (29), `docs/evidence/w2_*.png`, benchmark in DECISIONS W2.1 |
 | W3 — vehicle | not started | |
 | W4 — audio | not started | |
 | W5 — graphics | not started | |
@@ -75,3 +75,24 @@ Synchronous render timing in the browser pane (`__app.measure()`, medium): 7.5 m
 - Secondary dunes still read as fairly regular wrinkles from the air (GIS detail layer; needs `detail.*` re-tune + 7-min rebuild — not done).
 - Opposition-effect hotspot shows faint radial ripple streaks from high altitude.
 - Houses are plain boxes; power-line wires are not drawn.
+
+## W2 — interactive sand (DONE)
+
+Run: `npm run dev` → http://localhost:5173/?debug (drive mode is the default; `?veh=lc70`, `?deform=1024`). Keys in the on-screen help line.
+
+**Evidence (real Edge window 1600×900, medium, `node tests/shots.mjs w2 "quality=medium&debug" tests/views/w2.json`):**
+
+| Shot | What it shows | FPS |
+|---|---|---|
+| `w2_spray.png` | box vehicle driving in loose sand, spray from the rear wheels, ruts behind | 66 |
+| `w2_tracks.png` | ruts with side berms, softened by slumping | 73 |
+| `w2_bury.png` / `w2_bury_close.png` | 2H, 40 psi, full throttle up a 17–23° loose slope → `beached=true`, rear sink 0.28 / 0.56 m, belly on the sand (9 kN) | 73 |
+
+Per-frame cost while driving (debug overlay): physics 0.1–0.5 ms, deformation upload 0.1–0.3 ms (~1.1 k texels), spray ≤ 2.5 k particles (medium).
+
+**Tests (`tests/sand.test.ts`, `tests/sandVehicle.test.ts`):** airing down widens the patch and lowers sinkage; compact vs loose; low-speed wheelspin digs until stuck while rolling does not; groove + berm volume; slump softens walls; window recentre; 2H/40 psi on an 8° loose slope gets beached while 4H/15 psi climbs it; 20° compacted slope climbs in 4H; ruts left in the grid; grid CPU cost < 4 ms (measured 0.07–0.25 ms).
+
+**Open issues (W2):**
+- At idle on a slope the car creeps backwards slowly (~0.3 m/s braked on 20°) because the tyre model is regularised at low speed. Fix planned in W3 (static-friction anchor).
+- Full throttle in 2H on a 20° *compacted* slope breaks traction and rolls back (open diff, tyre falloff past peak) — plausible but harsh; revisit with W3 tyre tuning.
+- Placeholder box body only; real procedural bodies come in W3.

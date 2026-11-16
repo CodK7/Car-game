@@ -42,6 +42,7 @@ export async function openGame(browser, url, { timeout = 90000 } = {}) {
   const page = await browser.newPage();
   const errors = [];
   page.on('console', (m) => {
+    if (m.text().startsWith('BURY') || m.text().startsWith('INFO')) console.log(m.text());
     if (m.type() === 'error') errors.push(`console: ${m.text()}`);
   });
   page.on('pageerror', (e) => errors.push(`pageerror: ${e.message}`));

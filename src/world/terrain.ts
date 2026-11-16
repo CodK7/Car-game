@@ -28,7 +28,7 @@ uniform float uGrid;
 uniform vec2 uOrigin;     // pattern origin (snapped camera position)
 uniform vec3 uCamLocal;   // camera position relative to uOrigin (y absolute)
 uniform sampler2D uDeform;
-uniform vec4 uDeformRect; // centre x, centre z, size, enabled
+uniform vec4 uDeformRect; // centre x, centre z, size, enabled (texture wraps: uv = world / size)
 attribute vec4 iNode;     // origin x, origin z, size, lod level
 varying vec3 vWorld;
 varying vec2 vLocal;
@@ -65,11 +65,11 @@ void main() {
   loc -= fract(grid * 0.5) * 2.0 * cell * m;
   vec2 xz = loc + uOrigin;
   float h = heightAt(xz);
-  vec2 duv = (xz - uDeformRect.xy) / uDeformRect.z + 0.5;
+  vec2 duv = xz / uDeformRect.z;
   float inside = 0.0;
   if (uDeformRect.w > 0.5) {
-    vec2 e = min(duv, 1.0 - duv);
-    inside = smoothstep(0.0, 0.04, min(e.x, e.y));
+    vec2 e = 0.5 - abs(xz - uDeformRect.xy) / uDeformRect.z;
+    inside = smoothstep(0.0, 0.03, min(e.x, e.y));
     if (inside > 0.0) h += texture(uDeform, duv).r * inside;
   }
   vDuv = vec3(duv, inside);
@@ -86,6 +86,8 @@ uniform sampler2D uNormalTex;
 uniform sampler2D uMaskTex;
 uniform sampler2D uRipple;
 uniform sampler2D uDeform;
+uniform vec4 uDeformRect;
+uniform vec2 uDeformTexel; // 1/n, cell metres
 uniform vec3 uColLoose;
 uniform vec3 uColCompact;
 uniform vec3 uColCrest;
@@ -107,7 +109,7 @@ float glintLayer(vec2 p, float cell, vec3 N, vec3 V, vec3 L) {
   vec3 fn = normalize(N + vec3(h - 0.5, 0.0, h2 - 0.5) * 0.9);
   float s = max(dot(reflect(-V, fn), L), 0.0);
   s = pow(s, 90.0);
-  return s * spot * step(0.86, hash12(g + 5.1));
+  return s * spot * step(0.93, hash12(g + 5.1));
 }
 
 void main() {
@@ -138,13 +140,21 @@ void main() {
     macro = texture(uRipple, vLocal / 173.0).b;
   }
 
-  // tyre tracks (deformation layer): gb = height gradient, a = disturbed amount
+  // tyre tracks (deformation layer): r = height delta (m), g = disturbed amount; gradient from neighbour taps
   float track = 0.0;
+  float groove = 0.0;
   if (vDuv.z > 0.0) {
-    vec4 df = texture(uDeform, vDuv.xy);
-    bump *= 1.0 - 0.85 * df.a * vDuv.z;
-    bump += -df.gb * vDuv.z;
-    track = df.a * vDuv.z;
+    vec2 df = texture(uDeform, vDuv.xy).rg;
+    float t = uDeformTexel.x;
+    float hl = texture(uDeform, vDuv.xy - vec2(t, 0.0)).r;
+    float hr = texture(uDeform, vDuv.xy + vec2(t, 0.0)).r;
+    float hd = texture(uDeform, vDuv.xy - vec2(0.0, t)).r;
+    float hu = texture(uDeform, vDuv.xy + vec2(0.0, t)).r;
+    vec2 g = vec2(hr - hl, hu - hd) / (2.0 * uDeformTexel.y);
+    bump *= 1.0 - 0.85 * df.g * vDuv.z;
+    bump += -g * vDuv.z;
+    track = df.g * vDuv.z;
+    groove = clamp(-df.r * 6.0, 0.0, 1.0) * vDuv.z;
   }
   N = normalize(N + vec3(bump.x, 0.0, bump.y));
 
@@ -153,6 +163,7 @@ void main() {
   albedo *= 0.90 + 0.20 * macro;
   albedo *= 1.0 + 0.06 * (rp.b - 0.5) * rFade;
   albedo = mix(albedo, uColTrack, track * 0.55);
+  albedo *= 1.0 - 0.12 * groove;
   if (uFx.y > 0.5) {
     // wind streaks: sand grains saltating over the crests
     vec2 suv = vec2(dot(vLocal, uWind) * 0.012 - uTime * 0.11, dot(vLocal, wperp) * 0.23);
@@ -180,7 +191,7 @@ void main() {
     float f = lv - l0;
     float c0 = exp2(l0);
     float g = glintLayer(vLocal, c0, N, V, L) * (1.0 - f) + glintLayer(vLocal, c0 * 2.0, N, V, L) * f;
-    col += uSunColor * g * 3.0 * sh * (1.0 - smoothstep(50.0, 90.0, dist)) * (0.4 + 0.6 * loose) * (1.0 - track);
+    col += uSunColor * g * 1.5 * sh * (1.0 - smoothstep(25.0, 60.0, dist)) * (0.4 + 0.6 * loose) * (1.0 - track);
   }
   col = applyFog(col, vWorld);
   gl_FragColor = vec4(col, 1.0);
@@ -303,6 +314,7 @@ export class Terrain {
       uCamLocal: { value: new THREE.Vector3() },
       uDeform: { value: null },
       uDeformRect: { value: new THREE.Vector4(0, 0, 100, 0) },
+      uDeformTexel: { value: new THREE.Vector2(1 / 512, 0.2) },
       uNormalTex: { value: this.normalTex },
       uMaskTex: { value: maskTex },
       uRipple: { value: rippleTex },

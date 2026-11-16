@@ -27,6 +27,23 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - **W1.8 Houses**: OSM has only 90 buildings and no footprints for Al Mintarib, so residential streets get procedural houses (one per 30 m per side, 35 % skipped). ASSUMPTION; easy to turn off (`props.building.street.max = 0`).
 - **W1.9 Quality presets** (`src/config/quality.json`): Low = render scale 0.6, coarser LOD, no post; Auto starts at Low and climbs only after two 4-s windows above 55 FPS (integrated GPU is the floor).
 
+## W2 — sand
+
+- **W2.1 Deformation technique = CPU-authoritative toroidal grid + dirty-rect upload** (not a GPU render target). The physics must read the ruts every 120 Hz step, so a GPU RT would need a readback. Measured on UHD 630 (`node tests/measure_deform_gpu.mjs`, `tests/sandVehicle.test.ts`):
+
+  | Size (cell) | CPU grid: 8 stamps + slump + half-float pack / frame | GPU RT: 4 stamp passes | GPU RT: 64×64 sync readback |
+  |---|---|---|---|
+  | 512 (15.6 cm, 80 m) | **0.07 ms** | 0.34 ms | 0.91 ms (pipeline stall) |
+  | 1024 (10.9 cm, 112 m) | **0.10 ms** | 0.11 ms | 1.61 ms |
+  | 2048 (8.6 cm, 176 m) | **0.25 ms** | 0.12 ms | 6.40 ms |
+
+  The GPU stamps are cheap but the readback stalls the pipeline (1–6 ms) and async PBO readback lags 1–3 frames (the wheel would sit in last frame's rut). The CPU grid is the single source of truth for physics and rendering; only changed texels are uploaded (`texSubImage2D`, RG16F; measured 0.1–0.3 ms, ~1 k texels/frame). Final cost while driving: ≈0.2–0.5 ms CPU, 1–16 MB GPU depending on preset (Low 512, Medium 1024, High 2048 via `quality.json`). The grid scrolls toroidally with the car (no copy when it recentres).
+- **W2.2 Terrain shader** displaces vertices by the grid height and takes the normal from 4 texture taps; the second channel ("disturbed") darkens and kills ripples in the ruts. Edge of the window fades to 0 so there is no seam.
+- **W2.3 Sink model = Bekker pressure–sinkage** z = (p/k)^(1/n), ground pressure from tyre pressure + carcass stiffness, k blended loose↔compact from the mask. Digging rate ∝ loose² × slip × low-speed term × pressure term; rolling out lifts the wheel. Rolling resistance = hard term + bulldozing √(z/D). Beached = dug > 0.28 m at low speed. All constants in `src/config/sand.json`, ASSUMPTION (tuned to plausible Wahiba behaviour: 40 psi spins and digs on a moderate loose slope, 15 psi climbs it).
+- **W2.4 Grooves** are stamped per physics step as a capsule from the previous to the current contact (±0.62 r along the tyre), profile −d(1−u⁴), sand pushed into side berms (45 % of the volume, ASSUMPTION); slumping limits walls to the 33° angle of repose; slow wind fill erases old tracks.
+- **W2.5 Spray** = instanced quads with analytic ballistic motion in the vertex shader (CPU only writes spawn records in a ring buffer) → cost is O(spawns). Budget per preset, emission fades out between 25–160 m from the camera.
+- **W2.6 Spawn on slopes**: `VehicleSim.reset` aligns the body to the fitted ground plane (was: flat, dropped from above, which pivoted the car on steep dunes).
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).
