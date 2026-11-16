@@ -1,0 +1,7 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    { "name": "Wahiba: open game in Edge", "type": "msedge", "request": "launch", "url": "http://localhost:5173/?debug", "webRoot": "${workspaceFolder}", "preLaunchTask": "Wahiba: run game (npm run dev)" },
+    { "name": "Wahiba: open game in Chrome", "type": "chrome", "request": "launch", "url": "http://localhost:5173/?debug", "webRoot": "${workspaceFolder}", "preLaunchTask": "Wahiba: run game (npm run dev)" }
+  ]
+}

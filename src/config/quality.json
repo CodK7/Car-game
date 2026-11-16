@@ -1,0 +1,6 @@
+{
+  "low":    { "renderScale": 0.6, "terrainDetail": 1.1, "finestCell": 0.625,  "deformRes": 512,  "deformSize": 80,  "particles": 300,  "shrubRange": 220, "treeRange": 1600, "propDensity": 0.6, "shadowMap": 0,    "terrainShadowRes": 1024, "post": false, "shimmer": false, "sparkle": false, "wisps": false, "lensDust": false, "aniso": 1, "rippleFar": false },
+  "medium": { "renderScale": 0.8, "terrainDetail": 1.4, "finestCell": 0.625,  "deformRes": 1024, "deformSize": 112, "particles": 900,  "shrubRange": 380, "treeRange": 2600, "propDensity": 1.0, "shadowMap": 1024, "terrainShadowRes": 2048, "post": true,  "shimmer": false, "sparkle": true,  "wisps": true,  "lensDust": true,  "aniso": 4, "rippleFar": true },
+  "high":   { "renderScale": 1.0, "terrainDetail": 1.6,  "finestCell": 0.3125, "deformRes": 2048, "deformSize": 128, "particles": 2500, "shrubRange": 600, "treeRange": 4000, "propDensity": 1.4, "shadowMap": 2048, "terrainShadowRes": 2048, "post": true,  "shimmer": true,  "sparkle": true,  "wisps": true,  "lensDust": true,  "aniso": 8, "rippleFar": true },
+  "auto":   { "targetFps": 40, "downBelowFps": 27, "upAboveFps": 55, "windowSeconds": 4 }
+}

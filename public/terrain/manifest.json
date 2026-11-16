@@ -1,0 +1,32 @@
+{
+ "size": 4033,
+ "resolution_m": 5.0,
+ "extent_m": 20160.0,
+ "z0_m": 242.1699694824219,
+ "z_step_m": 0.003359375,
+ "height_min_m": 262.79653198242187,
+ "height_max_m": 441.7034069824219,
+ "height": "height_u16.bin",
+ "masks": "masks.png",
+ "masks_size": 2017,
+ "ripple": "ripple.png",
+ "ripple_tile_m": 2.0,
+ "osm": "osm.json",
+ "center_lonlat": [
+  58.78,
+  22.38
+ ],
+ "crs": "EPSG:32640",
+ "axes": "x = east, y = up (elevation AMSL, m), z = south; texel (col,row) centre -> x=(col-(n-1)/2)*res, z=(row-(n-1)/2)*res",
+ "attribution": [
+  "DEM: (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved.",
+  "ODbL 1.0 - (c) OpenStreetMap contributors"
+ ],
+ "counts": {
+  "roads": 1002,
+  "buildings": 90,
+  "places": 10,
+  "pois": 23,
+  "power": 1
+ }
+}

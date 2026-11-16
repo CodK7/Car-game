@@ -1,0 +1,28 @@
+{
+  "name": "wahiba-offroad-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "smoke": "node tests/smoke.mjs",
+    "server": "node server/server.mjs",
+    "data": "uv run --directory Tools/GIS python ../Web/export_web.py"
+  },
+  "dependencies": {
+    "three": "^0.170.0",
+    "ws": "^8.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/three": "^0.170.0",
+    "@types/ws": "^8.18.2",
+    "puppeteer-core": "^25.17.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  }
+}

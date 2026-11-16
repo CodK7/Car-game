@@ -1,0 +1,51 @@
+{
+  "center_lat": 22.38,
+  "center_lon": 58.78,
+  "landscape_size_px": 4033,
+  "resolution_m": 5.0,
+  "z_margin_m": 20.0,
+  "seed": 1407,
+  "dem": {
+    "source": "copernicus_glo30",
+    "base_url": "https://copernicus-dem-30m.s3.amazonaws.com",
+    "resampling": "cubic",
+    "denoise_sigma_m": 10.0
+  },
+  "detail": {
+    "detail_amplitude": 1.0,
+    "crest_sharpen_amount": 0.6,
+    "crest_sharpen_sigma_m": 45.0,
+    "repose_angle_deg": 33.0,
+    "secondary_dune_amp_m": 1.0,
+    "secondary_dune_wavelength_m": [60.0, 160.0],
+    "secondary_dune_angle_offset_deg": 70.0,
+    "secondary_dune_skew": 0.3,
+    "megaripple_amp_m": 0.05,
+    "megaripple_wavelength_px": [4.0, 8.0],
+    "orientation_bins": 8,
+    "orientation_presmooth_m": 60.0,
+    "orientation_integration_m": 400.0,
+    "local_window_m": 500.0
+  },
+  "ripple_tile": {
+    "size_px": 1024,
+    "tile_size_m": 2.0,
+    "wavelength_m": [0.08, 0.13],
+    "amplitude_m": 0.008
+  },
+  "osm": {
+    "endpoints": [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.private.coffee/api/interpreter",
+      "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+    ],
+    "timeout_s": 180,
+    "road_corridor_half_width_m": 8.0
+  },
+  "paths": {
+    "raw": "Data/GIS/raw",
+    "work": "Data/GIS/work",
+    "out": "Data/GIS/out"
+  }
+}

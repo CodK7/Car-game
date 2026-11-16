@@ -1,0 +1,97 @@
+{
+  "heightmap": "Wahiba_Height_4033.png",
+  "crs": "EPSG:32640",
+  "center_lonlat": [
+    58.78,
+    22.38
+  ],
+  "center_en": [
+    683260.0,
+    2475975.0
+  ],
+  "bounds_lonlat_wsen": [
+    58.68102906727368,
+    22.287898583256247,
+    58.87908585077073,
+    22.472092379284504
+  ],
+  "resolution_m": 5.0,
+  "landscape": {
+    "scale_x": 500.0,
+    "scale_y": 500.0,
+    "scale_z": 43.0,
+    "z_range_m": 220.16,
+    "z_step_m": 0.003359375,
+    "z0_m": 242.1699694824219,
+    "location_cm": [
+      -1008000.0,
+      -1008000.0,
+      35224.99694824219
+    ],
+    "data_z_min_m": 262.7975158691406,
+    "data_z_max_m": 441.7024230957031,
+    "margin_m": 20.0,
+    "size_px": 4033,
+    "extent_m": 20160.0,
+    "quads_per_section": 63,
+    "sections_per_component": 2,
+    "components_per_side": 32
+  },
+  "layers": {
+    "SandCompact": "Layer_SandCompact.png",
+    "SandLoose": "Layer_SandLoose.png"
+  },
+  "axes": "image col -> UE +X (east), image row -> UE +Y (south); world Z cm = elevation AMSL m * 100",
+  "dem_source": "copernicus_glo30",
+  "dem_tiles": [
+    "Copernicus_DSM_COG_10_N22_00_E058_00_DEM"
+  ],
+  "detail": {
+    "detail_amplitude": 1.0,
+    "repose_iterations": 136,
+    "detail_min_m": -2.99285888671875,
+    "detail_max_m": 7.46661376953125,
+    "detail_rms_m": 0.85862797498703,
+    "max_slope_deg": 35.098445892333984,
+    "max_axis_slope_deg": 33.15617370605469
+  },
+  "dune_signature": {
+    "megadune_spacing_m": 2228.5081961904034,
+    "megadune_crest_azimuth_fft_deg": 6.340191745909891,
+    "megadune_crest_azimuth_tensor_deg": 7.77880859375,
+    "orientation_coherence_mean": 0.7817355394363403,
+    "relief_m_p50": 64.17449951171875,
+    "relief_m_p95": 90.65885162353516,
+    "relief_m_max": 108.35726928710938,
+    "dune_area_fraction": 0.8197979119573215,
+    "interdune_area_fraction": 0.390013605212981,
+    "slope_deg_p50": 4.374175071716309,
+    "slope_deg_p99": 22.131059646606445
+  },
+  "verification": {
+    "quantization_max_abs_m": 0.0016796874999727152,
+    "ue_formula_vs_elevation_max_abs_m": 5.684341886080802e-14,
+    "reprojection_vs_source_dem": {
+      "n_points": 458190,
+      "max_abs_m": 1.88446044921875,
+      "rms_m": 0.10009768605232239,
+      "mean_m": 0.0037287038285285234,
+      "p99_abs_m": 0.36785888671875
+    },
+    "base_vs_source_dem": {
+      "n_points": 458190,
+      "max_abs_m": 3.3375244140625,
+      "rms_m": 0.31454014778137207,
+      "mean_m": 0.0036072609946131706,
+      "p99_abs_m": 1.112030029296875
+    },
+    "final_vs_source_dem": {
+      "n_points": 458190,
+      "max_abs_m": 5.847625732421875,
+      "rms_m": 0.8715673089027405,
+      "mean_m": 0.08627434074878693,
+      "p99_abs_m": 2.6903719902038574
+    }
+  },
+  "attribution": "DEM: (c) DLR e.V. 2010-2014 and (c) Airbus Defence and Space GmbH 2014-2018 provided under COPERNICUS by the European Union and ESA; all rights reserved."
+}

@@ -1,0 +1,8 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    { "label": "Wahiba: run game (npm run dev)", "type": "npm", "script": "dev", "isBackground": true, "problemMatcher": [], "group": { "kind": "build", "isDefault": true } },
+    { "label": "Wahiba: tests", "type": "npm", "script": "test", "problemMatcher": [], "group": "test" },
+    { "label": "Wahiba: multiplayer server", "type": "npm", "script": "server", "isBackground": true, "problemMatcher": [] }
+  ]
+}

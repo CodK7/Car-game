@@ -1,0 +1,14 @@
+# Node
+node_modules/
+dist/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# GIS pipeline: raw downloads and intermediates are reproducible
+Data/GIS/raw/
+Data/GIS/work/
