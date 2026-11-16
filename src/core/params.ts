@@ -12,6 +12,8 @@ export type QualityName = 'low' | 'medium' | 'high' | 'auto';
 
 export const P = {
   debug: q.has('debug'),
+  mp: q.has('mp') || q.has('server'), // multiplayer: ?mp (ws://<page host>:8787) or ?server=ws://host:port
+  server: q.get('server'),
   quality: (q.get('quality') ?? 'auto') as QualityName,
   tod: num('tod'),
   mode: q.get('mode') ?? 'drive', // drive | fly | sandtest
@@ -26,7 +28,6 @@ export const P = {
   bench: num('bench'), // seconds: run an automatic benchmark and publish window.__bench
   scale: num('scale'), // render-scale override
   mute: q.has('mute'),
-  mp: q.get('mp') ?? '', // multiplayer server url, e.g. ws://localhost:8787
   name: q.get('name') ?? '',
   lag: num('lag') ?? 0, // simulated latency (ms), multiplayer testing
   loss: num('loss') ?? 0, // simulated packet loss 0..1

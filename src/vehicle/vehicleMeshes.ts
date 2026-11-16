@@ -78,7 +78,7 @@ function profileBody(pts: [number, number][], archesU: number[], archR: number, 
 
 const box = (w: number, h: number, l: number, x: number, y: number, z: number) => new THREE.BoxGeometry(w, h, l).translate(x, y, z);
 
-export function buildBody(spec: VehicleSpec, kind: string): THREE.Group {
+export function buildBody(spec: VehicleSpec, kind: string, paintHex?: string): THREE.Group {
   const L = bodyLayout(spec);
   const W = spec.body.width;
   const r = spec.tyre.radius;
@@ -87,7 +87,7 @@ export function buildBody(spec: VehicleSpec, kind: string): THREE.Group {
   const u = (z: number) => -z; // body z -> profile u
   const archY = L.ground + r - 0.02; // arch centre height (wheel centre at rest is about here)
   const bottom = archY;
-  const paint = objMaterial({ color: PAINT[kind] ?? 0xdddddd, gloss: 0.45, receiveShadow: true });
+  const paint = objMaterial({ color: paintHex ? new THREE.Color(paintHex).getHex() : PAINT[kind] ?? 0xdddddd, gloss: 0.45, receiveShadow: true });
   const dark = objMaterial({ color: 0x23211f, gloss: 0.1, receiveShadow: true });
   const trim = objMaterial({ color: 0x55524d, gloss: 0.2 });
   const glass = objMaterial({ color: 0x1b2730, gloss: 0.9 });

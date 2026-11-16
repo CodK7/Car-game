@@ -17,6 +17,8 @@ import { TerrainShadowBaker } from './world/shadowBake';
 import worldCfg from './config/world.json';
 import { DriveSession } from './game/driveSession';
 import { buildBody } from './vehicle/vehicleMeshes';
+import { Game } from './game/game';
+import { NetClient } from './game/net';
 import { AudioSystem } from './audio/audioSystem';
 import { ObjShadows } from './gfx/shadows';
 import { PostFx } from './gfx/post';
@@ -37,6 +39,8 @@ export class App {
   shadowBaker!: TerrainShadowBaker;
   fly!: FlyCam;
   drive: DriveSession | null = null;
+  game: Game | null = null;
+  net: NetClient | null = null;
   audio = new AudioSystem();
   shadows = new ObjShadows();
   post = new PostFx();
@@ -101,8 +105,15 @@ export class App {
       status('vehicle');
       const veh = P.veh || 'patrol';
       this.vehName = veh;
-      this.drive = new DriveSession(this.assets.data, this.terrain, this.camera, q, veh, { x: sx, z: sz, heading: P.heading ?? sp.heading_deg }, (sim) => (P.box ? null : buildBody(sim.spec, veh)));
+      this.drive = new DriveSession(this.assets.data, this.terrain, this.camera, q, veh, { x: sx, z: sz, heading: P.heading ?? sp.heading_deg }, (sim, kind, paint) => (P.box ? null : buildBody(sim.spec, kind, paint)));
       this.scene.add(this.drive.group);
+      this.game = new Game(this.drive, this.scene, this.renderer, this.tod, (n) => (this.vehName = n));
+      if (P.mp) {
+        this.net = new NetClient(P.server || `ws://${location.hostname || 'localhost'}:8787`, this.drive, this.audio, this.drive.bodyFactory);
+        this.drive.netRope = () => this.net!.ropeKey();
+        this.game.netLine = () => this.net!.hudLine();
+        this.game.netMessages = this.net.messages;
+      }
     } else this.flyMode = true;
 
     this.drive?.spray.mesh && (this.drive.spray.mesh.userData.noShadow = true);
@@ -211,9 +222,11 @@ export class App {
       this.flyMode = !this.flyMode;
       if (this.flyMode) this.fly.yaw = this.camera.rotation.y;
     }
+    if (this.drive && !this.flyMode) this.game?.update(dt, this.input);
     if (this.bench) this.runBench(dt);
     else if (this.drive && !this.flyMode) this.drive.update(dt, this.input, this.renderer);
     else this.fly.update(dt, this.input, (x, z) => this.assets.data.heightAt(x, z));
+    this.net?.update(dt);
     this.audio.update(dt, this.drive && !this.flyMode ? this.drive.sim : null, this.vehName, this.camera, this.drive && !this.flyMode ? this.drive.cam.mode : 'fly');
 
     this.tod.update();
@@ -228,6 +241,7 @@ export class App {
     this.shadows.update(this.renderer, this.scene, this.camera);
     if (this.quality.q.post && !P.nopost) this.post.render(this.renderer, this.scene, this.camera, this.quality.q, this.time, this.tod.elevationDeg);
     else this.renderer.render(this.scene, this.camera);
+    this.game?.afterRender();
     this.input.endFrame();
 
     this.statsT += dt;

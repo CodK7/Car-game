@@ -10,13 +10,17 @@ import { DeformGrid } from '../sand/deformGrid';
 import { DeformTexture } from '../sand/deformTexture';
 import { SandGround } from '../sand/sandGround';
 import { SandSpray } from '../sand/particles';
-import { getSpec, VehicleSim } from '../vehicle/vehicleSim';
-import { VehicleView } from '../vehicle/vehicleView';
+import { getSpec, VehicleSim, VehicleSpec } from '../vehicle/vehicleSim';
+import { VehicleView, wheelMesh } from '../vehicle/vehicleView';
+import { Recovery } from './recovery';
+import rcfg from '../config/recovery.json';
 import { VehicleCamera } from '../vehicle/cameras';
 import { DriveController } from './driveController';
 import { tun } from '../core/tunables';
 
 export const SIM_DT = 1 / 120;
+const ROPE_SEGS = 16;
+export type BodyFactory = (sim: VehicleSim, kind: string, paint?: string) => THREE.Object3D | null;
 
 export class DriveSession {
   grid!: DeformGrid;
@@ -27,6 +31,10 @@ export class DriveSession {
   spray: SandSpray;
   cam: VehicleCamera;
   ctl = new DriveController();
+  rec = new Recovery();
+  partnerView: VehicleView | null = null;
+  private ropeMesh: THREE.InstancedMesh;
+  private anchorMesh: THREE.Object3D;
   readonly group = new THREE.Group();
   private acc = 0;
   physMs = 0;
@@ -39,7 +47,15 @@ export class DriveSession {
   private stuckT = 0;
   private time = 0;
   private deformRes = 0;
-  bodyFactory: ((sim: VehicleSim) => THREE.Object3D | null) | null = null;
+  bodyFactory: BodyFactory | null = null;
+  kind: string;
+  paint: string | undefined;
+  /** extra HUD lines (missions) */
+  extraHud: (() => string) | null = null;
+  /** multiplayer hook for T (returns true when it handled the key) */
+  netRope: (() => boolean) | null = null;
+  /** input blocked (menu open): physics paused too */
+  blocked = false;
 
   constructor(
     readonly terrainData: TerrainData,
@@ -48,23 +64,37 @@ export class DriveSession {
     q: Quality,
     vehicleName: string,
     spawn: { x: number; z: number; heading: number },
-    bodyFactory: ((sim: VehicleSim) => THREE.Object3D | null) | null = null,
+    bodyFactory: BodyFactory | null = null,
+    spec?: VehicleSpec,
+    paint?: string,
   ) {
+    this.kind = vehicleName;
+    this.paint = paint;
     this.buildDeform(q);
-    this.sim = new VehicleSim(getSpec(vehicleName), this.ground);
+    this.sim = new VehicleSim(spec ?? getSpec(vehicleName), this.ground);
     this.sim.deform = this.grid;
     this.sim.reset(spawn.x, spawn.z, spawn.heading);
     this.bodyFactory = bodyFactory;
-    this.view = new VehicleView(this.sim, bodyFactory ? bodyFactory(this.sim) : null);
+    this.view = new VehicleView(this.sim, bodyFactory ? bodyFactory(this.sim, vehicleName, paint) : null);
     this.spray = new SandSpray(2500);
     this.spray.setBudget(q.particles);
     this.group.add(this.view.group, this.spray.mesh);
+    const ropeGeo = new THREE.CylinderGeometry(0.018, 0.018, 1, 5, 1, true);
+    this.ropeMesh = new THREE.InstancedMesh(ropeGeo, new THREE.MeshBasicMaterial({ color: 0x3a3a3a }), ROPE_SEGS);
+    this.ropeMesh.frustumCulled = false;
+    this.ropeMesh.visible = false;
+    this.ropeMesh.userData.noShadow = true;
+    this.anchorMesh = wheelMesh(0.4, 0.27);
+    this.anchorMesh.rotation.z = Math.PI / 2;
+    this.anchorMesh.visible = false;
+    this.group.add(this.ropeMesh, this.anchorMesh);
     this.cam = new VehicleCamera(camera);
     this.ctl.autoDrive = P.auto;
     if (this.hud) this.hud.style.display = 'block';
     if (this.helpEl)
       this.helpEl.textContent =
-        'Click = sound · W/S drive/brake · A/D steer · Space handbrake · 1/2/3 = 2H/4H/4L · L/K lockers · [ ] tyre psi · C camera · V shake · M auto/manual · R reset';
+        'Click = sound · W/S drive/brake · A/D steer · Space handbrake · 1/2/3 = 2H/4H/4L · L/K lockers · [ ] tyre psi · C camera · V shake · M auto/manual · R reset\n' +
+        'H winch (J reel, U out) · T recovery car · G dig';
     tun('Vehicle', this.sim, 'mass', 1200, 4000, 10);
     tun('Vehicle', this.sim.spec.tyre, 'mu_sand', 0.3, 1.2, 0.01);
     tun('Vehicle', this.sim.spec.tyre, 'mu_hard', 0.5, 1.4, 0.01);
@@ -108,16 +138,18 @@ export class DriveSession {
   update(dt: number, input: Input, renderer: THREE.WebGLRenderer): void {
     const sim = this.sim;
     this.time += dt;
-    this.ctl.update(dt, input, sim);
+    if (!this.blocked) this.ctl.update(dt, input, sim);
     if (input.hit('KeyC') || input.padHit(9)) this.cam.cycle();
     if (input.hit('KeyV')) this.cam.shake = !this.cam.shake;
     if (input.hit('KeyR') || input.padHit(8)) this.recover();
+    if (!this.blocked) this.recoveryInput(input);
     // fixed-step physics
     const t0 = performance.now();
     this.acc += dt;
     let n = 0;
-    if (this.frozen) this.acc = 0; // photo mode / stability tests: physics paused
+    if (this.frozen || this.blocked) this.acc = 0; // photo mode / stability tests: physics paused
     while (this.acc >= SIM_DT && n < 12) {
+      this.rec.step(SIM_DT, this.grid);
       sim.step(SIM_DT);
       this.acc -= SIM_DT;
       n++;
@@ -142,13 +174,130 @@ export class DriveSession {
     }
     this.spray.update(this.time);
     this.view.update();
+    this.updateRecoveryVisuals();
     this.cam.update(dt, sim, input, (x, z) => this.ground.heightAt(x, z));
     this.updateHud(dt);
   }
 
-  /** Put the vehicle back upright on its wheels nearby (keeps position). */
+  /** Swap the player's vehicle (garage): new spec/body, same place, heading, tyre pressure and drive mode. */
+  replaceVehicle(spec: VehicleSpec, kind: string, paint?: string): void {
+    const old = this.sim;
+    const sim = new VehicleSim(spec, this.ground);
+    sim.deform = this.grid;
+    const f = old.fwd;
+    sim.reset(old.pos.x, old.pos.z, (Math.atan2(f.x, -f.z) * 180) / Math.PI);
+    sim.setPressure(old.wheels[0].pressurePsi);
+    sim.mode = old.mode;
+    sim.autoGearbox = old.autoGearbox;
+    this.sim = sim;
+    this.kind = kind;
+    this.paint = paint;
+    this.group.remove(this.view.group);
+    this.view = new VehicleView(sim, this.bodyFactory ? this.bodyFactory(sim, kind, paint) : null);
+    this.group.add(this.view.group);
+    if (this.rec.rope) this.rec.release(false);
+    this.rec.player = sim;
+  }
+
+  // ---------------- recovery ----------------
+  /** H winch to anchor / release · J hold = reel in · U hold = pay out · T recovery car (attach → pull → release) · G dig */
+  private recoveryInput(input: Input): void {
+    const rec = this.rec, sim = this.sim;
+    rec.player = sim;
+    if (input.hit('KeyH')) {
+      if (rec.rope && rec.anchor) rec.release();
+      else rec.attachAnchor(sim, 'winch');
+    }
+    if (rec.rope && rec.rope.winch) rec.rope.winchCmd = input.down('KeyJ') ? 1 : input.down('KeyU') ? -1 : 0;
+    if (input.hit('KeyT') && this.netRope && this.netRope()) {
+      // handled by the multiplayer client (strap to another player)
+    } else if (input.hit('KeyT') && rec.partner && rec.partnerRole === 'stranded') {
+      if (rec.rope) rec.release();
+      else if (rec.partner.pos.distanceTo(sim.pos) < 16) rec.attachVehicle(sim, rec.partner, 'strap');
+      else rec.say(`Get within 15 m of the stuck car (${rec.partner.pos.distanceTo(sim.pos).toFixed(0)} m)`);
+    } else if (input.hit('KeyT')) {
+      if (!rec.rope || rec.anchor) {
+        const kind = Math.abs(sim.speed) < 0.5 && sim.beached ? 'strap' : 'tow';
+        rec.attachPartner(sim, kind, 'rear', kind === 'strap' ? 2 : 0.5);
+        rec.partnerKind = rcfg.partner.vehicle;
+        rec.partnerPaint = undefined;
+      } else if (!rec.partnerDrive) {
+        rec.partnerDrive = true;
+        rec.say(rec.kind === 'strap' ? 'Recovery car: snatch! (ease off the throttle, steer straight)' : 'Recovery car: towing');
+      } else {
+        rec.release();
+        rec.dismissPartner();
+      }
+    }
+    if (input.hit('KeyG')) {
+      if (Math.abs(sim.speed) > 0.5) rec.say('Stop first to dig');
+      else rec.startDig();
+    }
+    if (rec.digging) {
+      sim.input.throttle = 0;
+      sim.input.brake = 1;
+    }
+  }
+
+  private ensurePartnerView(p: VehicleSim): void {
+    if (this.partnerView?.sim === p) return;
+    if (this.partnerView) this.group.remove(this.partnerView.group);
+    this.partnerView = new VehicleView(p, this.bodyFactory ? this.bodyFactory(p, this.rec.partnerKind, this.rec.partnerPaint) : null);
+    this.group.add(this.partnerView.group);
+  }
+
+  private updateRecoveryVisuals(): void {
+    const rec = this.rec;
+    if (this.partnerView && rec.partner !== this.partnerView.sim) {
+      this.group.remove(this.partnerView.group);
+      this.partnerView = null;
+    }
+    if (rec.partner) this.ensurePartnerView(rec.partner);
+    this.partnerView?.update();
+    // anchor marker: half-buried spare wheel
+    this.anchorMesh.visible = !!rec.anchor;
+    if (rec.anchor) this.anchorMesh.position.copy(rec.anchor).setY(rec.anchor.y - 0.25);
+    // rope: segments along a sagging curve (sag from slack, none when taut)
+    const r = rec.rope;
+    this.ropeMesh.visible = !!r;
+    if (!r) return;
+    const a = rec.endA, b = rec.endB;
+    if (rec.anchor && !rec.active) b.copy(rec.anchor);
+    const dist = a.distanceTo(b);
+    const slack = Math.max(0, r.restLength - dist);
+    const sag = Math.sqrt(Math.max(0, (3 * dist * slack) / 8)) + 0.02; // parabola with the same arc length
+    const n = ROPE_SEGS;
+    const p0 = new THREE.Vector3(), p1 = new THREE.Vector3(), m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3();
+    const Y = new THREE.Vector3(0, 1, 0), d = new THREE.Vector3();
+    const at = (t: number, o: THREE.Vector3) => {
+      o.lerpVectors(a, b, t);
+      o.y -= sag * 4 * t * (1 - t);
+      const gy = this.ground.heightAt(o.x, o.z) + 0.03;
+      if (o.y < gy) o.y = gy;
+      return o;
+    };
+    for (let i = 0; i < n; i++) {
+      at(i / n, p0);
+      at((i + 1) / n, p1);
+      d.subVectors(p1, p0);
+      const len = d.length() || 1e-3;
+      q.setFromUnitVectors(Y, d.multiplyScalar(1 / len));
+      s.set(1, len, 1);
+      m.compose(p0.add(p1).multiplyScalar(0.5), q, s);
+      this.ropeMesh.setMatrixAt(i, m);
+    }
+    this.ropeMesh.instanceMatrix.needsUpdate = true;
+    const col = rec.kind === 'strap' ? 0xc8481f : rec.kind === 'winch' ? 0x3a3a3a : 0xd8b23a;
+    (this.ropeMesh.material as THREE.MeshBasicMaterial).color.setHex(r.load > 0.7 ? 0xff2a10 : col);
+  }
+
+  /** Put the vehicle back upright on its wheels nearby (keeps position). Not allowed while beached. */
   recover(): void {
     const s = this.sim;
+    if (s.beached && s.up.y > 0.5 && !P.debug) {
+      this.ctl.say('Beached: air down ( [ ), rock it, dig (G), winch (H, hold J) or call the recovery car (T)');
+      return;
+    }
     const f = s.fwd;
     const heading = (Math.atan2(f.x, -f.z) * 180) / Math.PI;
     s.reset(s.pos.x, s.pos.z, heading);
@@ -158,6 +307,7 @@ export class DriveSession {
   private updateHud(dt: number): void {
     const s = this.sim;
     for (const m of this.ctl.messages.splice(0)) this.flash(m);
+    for (const m of this.rec.messages.splice(0)) this.flash(m);
     if (this.msgEl && this.msgT > 0) {
       this.msgT -= dt;
       if (this.msgT <= 0) this.msgEl.style.opacity = '0';
@@ -179,7 +329,20 @@ export class DriveSession {
       `<span class="big">${kmh.toFixed(0)}</span> km/h\n` +
       `${s.rpm.toFixed(0).padStart(4)} rpm  gear ${g}${s.autoGearbox ? ' A' : ' M'}\n` +
       `${s.mode}  lockers ${lock}  ${s.wheels[0].pressurePsi.toFixed(0)} psi\n` +
-      `sink ${sink.toFixed(0)} cm${s.beached ? '  BEACHED' : ''}`;
+      `sink ${sink.toFixed(0)} cm${s.beached ? '  BEACHED' : ''}` +
+      this.ropeHud() +
+      (this.extraHud ? this.extraHud() : '');
+  }
+
+  private ropeHud(): string {
+    const rec = this.rec, r = rec.rope;
+    if (rec.digging) return `\ndigging ${'█'.repeat(Math.round((rec.digT / rcfg.dig.seconds) * 10)).padEnd(10, '░')}`;
+    if (!r) return '';
+    const frac = Math.min(1, r.load);
+    const bar = '█'.repeat(Math.round(frac * 10)).padEnd(10, '░');
+    const warn = frac > rcfg.hud.warnFrac ? ' <span style="color:#ff6a4a">!</span>' : '';
+    const w = r.winch ? `  ${r.winchCmd > 0 ? 'reel' : r.winchCmd < 0 ? 'out' : 'hold'} ${r.restLength.toFixed(1)} m` : '';
+    return `\n${rec.kind} ${(r.tension / 1000).toFixed(1).padStart(4)} kN ${bar}${warn}${w}`;
   }
 
   flash(m: string): void {

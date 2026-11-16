@@ -253,7 +253,8 @@ export class VehicleSim {
     this.updateFrame();
   }
 
-  private updateFrame(): void {
+  /** refresh R / fwd / up / right from quat (also used for network ghosts) */
+  updateFrame(): void {
     this.R.setFromMatrix4(tmpM4.makeRotationFromQuaternion(this.quat));
     this.up.set(0, 1, 0).applyQuaternion(this.quat);
     this.fwd.set(0, 0, -1).applyQuaternion(this.quat);

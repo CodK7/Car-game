@@ -75,6 +75,58 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - **W5.6 Sand wisps** reuse the W1 crest wind-streak shader instead of a particle system (zero extra draw calls).
 - **W5.7 High preset** = renderScale 0.85, finest terrain cell 0.625 m, 3 cascades at 2048: 25–31 FPS on the UHD 630 after two attempts; documented as a discrete-GPU preset instead of cutting its features further.
 
+## W6 — gameplay
+
+- **W6.1 Rope model**: one linear spring-damper per rope.
+  - Stiffness: EA = MBS / elongation-at-MBS; k = EA / rest length.
+  - Damping ζ is based on the effective two-body mass m_eff = mA·mB/(mA+mB). The rope is mass-aware: a heavy pair stretches it more, and stores more energy at the same closing speed.
+  - The rope only pulls, never pushes. It breaks above MBS.
+  - The force is applied at the hook points, so pulling off-centre yaws the car.
+  - The maths lives in the import-free `ropeCore.ts`, shared by the game and the server.
+- **W6.2 Rope catalogue** (ASSUMPTION, typical market figures):
+
+  | Rope | Length | MBS | Elongation at MBS | ζ |
+  |---|---|---|---|---|
+  | Kinetic strap | 9 m | 78 kN | 20 % | 0.12 |
+  | Tow rope | 6 m | 60 kN | 8 % | 0.35 |
+  | Winch synthetic line | 28 m | 95 kN | 3.5 % | 0.4 |
+
+  - Winch (≈5.4 t class): line speed 0.15 m/s with no load, falling linearly to 0 at a 53 kN stall.
+  - Sand anchor: holds 70 kN, then drags at 45 kN.
+- **W6.3 "Recoverable only by…" rule**: while `beached`, R (reset) is refused outside `?debug`. The only ways out are the five that have a mechanism in the simulation:
+  - Lower the pressure (`[`).
+  - Rock the car (throttle and reverse).
+  - Dig: G, 4 s, lowers `dug` and removes sand under the belly in the deformation grid.
+  - Strap tow from the partner car (T).
+  - Winch to an anchor (H, then J/U).
+  - Tests prove the car stays stuck without these and gets out with each one.
+- **W6.4 Partner car**: an AI LC70 spawned 4 m behind, facing away, in 4L at 18 psi.
+  - It drives straight away at a held 2.5 m/s (P-controller on throttle). A snatch therefore comes from slack plus speed.
+  - It is a gameplay helper, not a path-finding AI.
+- **W6.5 Parts are data**: `parts.json` ops (mul / add / set / setIfNull / mulCurve) applied to a deep-cloned vehicle spec. The presets are never touched.
+  - Every number is an ASSUMPTION, sized to the published difference of each kind of part. Examples: balloon tyre width +30 %, turbo +30 % torque above 2000 rpm, crawler low range ×1.4.
+  - The test writes the full effect table, and proves the effects with driving tests instead of only checking the numbers.
+- **W6.6 Missions**: one JSON file. Gates and spawn points sit on real terrain near the spawn: the west and east dune faces from W2/W3, plus an interdune loop.
+  - The convoy mission is timed checkpoints, a simplification: no AI convoy cars.
+  - Rewards in credits; a gold time pays ×1.5.
+- **W6.7 Multiplayer authority** (also written at the top of `server/server.mjs`):
+  - **Server-authoritative**:
+    - Room membership (max 8) and player ids.
+    - Rope connections: who is tied to whom, which hooks, kind, rest length.
+    - Rope tension and breaking, computed at every 20 Hz tick from the latest states, extrapolated by velocity.
+    - The clock.
+  - **Client-authoritative**: each player's own vehicle physics at 120 Hz (this is the client-side prediction), sent 20×/s.
+  - Remote cars are shown 150 ms in the past using Hermite interpolation, with up to 0.5 s of dead-reckoning when packets are lost.
+  - Each client applies the rope force to its own car with the shared rope maths and the server's rest length, and obeys the server's `broken` flag.
+  - Chosen over a fully server-simulated physics model: the server would need the terrain, the sand grid and two physics simulations per player, and 2–8 players over a hobby link do not justify it.
+  - Cost: under lag the two ends feel slightly different forces.
+  - Every snapshot carries the full state, so packet loss only delays facts and never loses them.
+- **W6.8 Save game**: localStorage key `wahiba.save.v1` holds credits, owned parts, builds per vehicle, livery, best times, finished missions and odometer.
+  - Saved every 20 s, on a win, and on page close.
+  - `?nosave` disables saving (automated tests).
+  - Start credits: 3000.
+- **W6.9 Photo mode** freezes the simulation, hides the HUD and keeps the orbit camera. Enter saves a PNG of the canvas, read back after the render so the WebGL buffer is valid.
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).
@@ -85,3 +137,7 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 6. Both vehicles default to automatic (the real LC79 is manual-only).
 7. Audio is judged by tests/spectra only (no one to listen overnight); demo WAVs saved for the morning.
 8. High preset left below 30 FPS on this GPU (W5.7) instead of removing its effects; Low/Medium carry the 30+ FPS target.
+9. Multiplayer authority split (W6.7): clients own their own physics, the server owns ropes, membership and the clock.
+10. Convoy mission done as timed checkpoints instead of AI convoy cars (W6.6).
+11. Part prices, rope ratings and part effects are estimates (W6.2, W6.5), marked ASSUMPTION.
+12. The R reset is disabled while beached (debug excepted), so recovery is required, as the W6 brief says.

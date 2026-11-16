@@ -1,0 +1,13 @@
+{
+  "_note": "Recovery gear. Stiffness comes from minimum breaking strength (MBS) and elongation at MBS: EA = MBS / elongation, k = EA / length. Values are typical catalogue figures (ASSUMPTION, see DECISIONS W6.2).",
+  "ropes": {
+    "strap": { "label": "Kinetic snatch strap 9 m", "length": 9, "mbsN": 78000, "elongAtMbs": 0.2, "dampingRatio": 0.12 },
+    "tow": { "label": "Static tow rope 6 m", "length": 6, "mbsN": 60000, "elongAtMbs": 0.08, "dampingRatio": 0.35 },
+    "winch": { "label": "Synthetic winch line 28 m", "length": 28, "mbsN": 95000, "elongAtMbs": 0.035, "dampingRatio": 0.4 }
+  },
+  "winch": { "_note": "12,000 lb class electric winch, first layer (ASSUMPTION)", "lineSpeedNoLoad": 0.15, "stallPullN": 53000, "payoutSpeed": 0.6 },
+  "anchor": { "_note": "buried spare wheel / sand anchor: holds until this pull, then drags", "holdN": 70000, "dragN": 45000 },
+  "dig": { "_note": "shovel: each second of digging removes this much dug-in depth per wheel and lowers the sand under the belly", "seconds": 4, "wheelDigPerSec": 0.06, "bellyLowerPerSec": 0.05, "radius": 0.7 },
+  "partner": { "_note": "AI recovery vehicle for snatch / tow", "vehicle": "lc70", "standOff": 4, "throttle": 0.7, "pullSpeed": 2.5 },
+  "hud": { "warnFrac": 0.7 }
+}
