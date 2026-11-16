@@ -12,7 +12,7 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | W2 — sand | DONE | tests green (29), `docs/evidence/w2_*.png`, benchmark in DECISIONS W2.1 |
 | W3 — vehicle | DONE | tests green (43), `docs/evidence/w3_*.png`, metrics table below |
 | W4 — audio | DONE | tests green (50), `tests/measure_audio.mjs`, demos `docs/evidence/w4_demo_*.wav` |
-| W5 — graphics | not started | |
+| W5 — graphics | DONE (High < 30 FPS here) | tests green (53), `docs/evidence/w5_*.png`, `tests/measure_flicker.mjs` |
 | W6 — gameplay | not started | |
 
 ## Section A — cleanup (2026-11-16)
@@ -75,6 +75,34 @@ Synchronous render timing in the browser pane (`__app.measure()`, medium): 7.5 m
 - Secondary dunes still read as fairly regular wrinkles from the air (GIS detail layer; needs `detail.*` re-tune + 7-min rebuild — not done).
 - Opposition-effect hotspot shows faint radial ripple streaks from high altitude.
 - Houses are plain boxes; power-line wires are not drawn.
+
+## W5 — graphics (DONE, High preset below 30 FPS on the UHD 630)
+
+Run: `npm run dev` → `?quality=low|medium|high|auto`, `?debug` for the Effects folder (object shadows, shimmer, haze, haze density, lens dust, contrast, sand wisps). `?noshadow` / `?nopost` switch the new passes off.
+
+What was added:
+- **Object shadows** (`src/gfx/shadows.ts`): cascaded shadow maps in one depth atlas (Low 1×512, Medium 2×1024, High 3×2048), stable bounding-sphere fit snapped to whole texels, cascade 0 every frame / 1 every 2nd / 2 every 4th, 15 % blend between cascades, 4×4 bilinear PCF. Vehicle, trees, shrubs and houses cast onto the terrain and each other (terrain self-shadow stays baked from W1).
+- **Post pass** (`src/gfx/post.ts`, Medium/High): half-float HDR target + depth texture, then one full-screen pass: heat shimmer (distance-masked, grows with sun height, depth-checked so the car gets no halo; High only), dust haze (depth-based, forward-scattering towards the sun), lens dust (only when the sun is in/near the frame), gentle S-curve contrast, ACES, sRGB, dither.
+- **Sand wisps** = the existing animated wind streaks on dune crests (terrain shader), now a toggle.
+- Physics pause flag `drive.frozen` (used by the stability test, reused by photo mode in W6).
+
+**Evidence (real Edge window 1600×900, patrol, `node tests/shots.mjs w5_<q> "quality=<q>&veh=patrol" tests/views/w5.json`):** `docs/evidence/w5_{low,medium,high}_{golden_chase,golden_sun,noon_chase,noon_far}.png`.
+
+| Preset | golden_chase | golden_sun | noon_chase | noon_far |
+|---|---|---|---|---|
+| Low | 55.6 | 67.8 | 68.0 | 68.8 |
+| Medium | 43.9 | 47.3 | 53.4 | 53.9 |
+| High (renderScale 1.0, first run) | 21.3 | 23.3 | 24.4 | 25.0 |
+| High (renderScale 0.85, finest cell 0.625 m — final) | 24.5 | 26.8 | 28.1 | 31.2 |
+
+**Temporal stability** (`node tests/measure_flicker.mjs <q>`; parked car, physics frozen, static camera, shimmer off, 6 frames 250 ms apart, pixels changing by > 24/255): Medium max 0.008 %, High max 0.034 % (only animated crest wisps). No temporal accumulation is used, so ghosting cannot occur. With physics running, the idle body vibration moves all edges (~5 % of pixels) — that is the engine rock, not shadow flicker.
+
+**Tests:** `tests/shadows.test.ts` — cascade centre snaps to whole texels while the camera slides, projection size constant while turning, every cascade contains its frustum slice. Total 53 tests green, build + smoke pass.
+
+**Open issues (W5):**
+- High stays at 25–31 FPS on the UHD 630 after two fixes (render scale, terrain cell); it is meant for discrete GPUs. Auto picks Medium/Low here.
+- Shadow correctness while the camera moves is covered by the snapping test and by eye on stills only, not measured live.
+- No SSAO/bloom (the budget went to shadows and haze).
 
 ## W4 — audio (DONE)
 

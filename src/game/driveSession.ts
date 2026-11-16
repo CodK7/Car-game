@@ -102,6 +102,9 @@ export class DriveSession {
     this.spray.setBudget(q.particles);
   }
 
+  /** pause physics (photo mode, temporal stability measurements) */
+  frozen = false;
+
   update(dt: number, input: Input, renderer: THREE.WebGLRenderer): void {
     const sim = this.sim;
     this.time += dt;
@@ -113,6 +116,7 @@ export class DriveSession {
     const t0 = performance.now();
     this.acc += dt;
     let n = 0;
+    if (this.frozen) this.acc = 0; // photo mode / stability tests: physics paused
     while (this.acc >= SIM_DT && n < 12) {
       sim.step(SIM_DT);
       this.acc -= SIM_DT;

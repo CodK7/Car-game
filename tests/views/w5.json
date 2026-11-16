@@ -1,0 +1,6 @@
+[
+  { "name": "golden_chase", "tod": 16.6, "wait": 6, "js": "a.drive.cam.orbitHold = true; a.drive.sim.input.brake = 1; a.drive.cam.yawOff = 2.2; a.drive.cam.pitchOff = 0.18; a.drive.cam.distance = 9;" },
+  { "name": "golden_sun", "tod": 16.9, "wait": 4, "js": "const s = a.drive.sim, sd = window.__THREE ? null : null; const sun = a.terrain.uniforms.uSunDir ? a.terrain.uniforms.uSunDir.value : null; const d = sun || {x: -0.8, z: 0.3}; a.drive.cam.yawOff = Math.atan2(d.x, d.z) - Math.atan2(s.fwd.x, s.fwd.z); a.drive.cam.pitchOff = 0.05; a.drive.cam.distance = 10;" },
+  { "name": "noon_chase", "tod": 12.3, "wait": 5, "js": "a.drive.cam.yawOff = 2.2; a.drive.cam.pitchOff = 0.18; a.drive.cam.distance = 9;" },
+  { "name": "noon_far", "tod": 12.3, "wait": 4, "js": "a.drive.cam.yawOff = 0.4; a.drive.cam.pitchOff = 0.0; a.drive.cam.distance = 7;" }
+]

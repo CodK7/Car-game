@@ -16,6 +16,8 @@ export const P = {
   tod: num('tod'),
   mode: q.get('mode') ?? 'drive', // drive | fly | sandtest
   veh: q.get('veh') ?? '',
+  noshadow: q.has('noshadow'), // disable object shadow maps
+  nopost: q.has('nopost'), // disable post-processing
   box: q.has('box'), // W2 placeholder box body instead of the procedural body
   seed: num('seed'),
   x: num('x'),

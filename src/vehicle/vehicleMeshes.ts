@@ -87,8 +87,8 @@ export function buildBody(spec: VehicleSpec, kind: string): THREE.Group {
   const u = (z: number) => -z; // body z -> profile u
   const archY = L.ground + r - 0.02; // arch centre height (wheel centre at rest is about here)
   const bottom = archY;
-  const paint = objMaterial({ color: PAINT[kind] ?? 0xdddddd, gloss: 0.45 });
-  const dark = objMaterial({ color: 0x23211f, gloss: 0.1 });
+  const paint = objMaterial({ color: PAINT[kind] ?? 0xdddddd, gloss: 0.45, receiveShadow: true });
+  const dark = objMaterial({ color: 0x23211f, gloss: 0.1, receiveShadow: true });
   const trim = objMaterial({ color: 0x55524d, gloss: 0.2 });
   const glass = objMaterial({ color: 0x1b2730, gloss: 0.9 });
   const chrome = objMaterial({ color: 0xbfbcb4, gloss: 0.7 });

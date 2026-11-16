@@ -19,7 +19,9 @@ export const atmo = {
   uWind: { value: new THREE.Vector2(1, 0) }, // unit vector the wind blows towards (x east, z south)
   uTerrShadow: { value: null as THREE.Texture | null }, // baked heightfield sun shadow (R), terrain uv space
   uObjShadow: { value: null as THREE.Texture | null }, // depth map of vehicles/props near the player
-  uObjShadowMat: { value: new THREE.Matrix4() },
+  uObjShadowMats: { value: [new THREE.Matrix4(), new THREE.Matrix4(), new THREE.Matrix4()] }, // per cascade: proj * view
+  uObjShadowSplits: { value: new THREE.Vector4(30, 0, 0, 1) }, // far distance of cascade 0..2, w = count
+  uObjShadowCount: { value: 1 },
   uObjShadowOn: { value: 0 },
   uTerrUv: { value: new THREE.Vector3(10082.5, 1 / 20165, 0) }, // world xz -> terrain uv: (xz + x) * y
 };
@@ -38,7 +40,9 @@ uniform float uTime;
 uniform vec2 uWind;
 uniform sampler2D uTerrShadow;
 uniform sampler2D uObjShadow;
-uniform mat4 uObjShadowMat;
+uniform mat4 uObjShadowMats[3];
+uniform vec4 uObjShadowSplits;
+uniform float uObjShadowCount;
 uniform float uObjShadowOn;
 uniform vec3 uTerrUv;
 
@@ -70,21 +74,49 @@ float terrainShadow(vec3 wp) {
   return texture(uTerrShadow, (wp.xz + uTerrUv.x) * uTerrUv.y).r;
 }
 
-float objShadow(vec3 wp) {
-  if (uObjShadowOn < 0.5) return 1.0;
-  vec4 sc = uObjShadowMat * vec4(wp, 1.0);
+// bilinear-weighted 2x2 depth compare (smooth 1-texel edge)
+float shadowPcf(vec2 uv, float z, vec2 ts) {
+  vec2 st = uv / ts - 0.5;
+  vec2 f = fract(st);
+  vec2 b = (floor(st) + 0.5) * ts;
+  float a0 = step(z, texture(uObjShadow, b).r);
+  float a1 = step(z, texture(uObjShadow, b + vec2(ts.x, 0.0)).r);
+  float a2 = step(z, texture(uObjShadow, b + vec2(0.0, ts.y)).r);
+  float a3 = step(z, texture(uObjShadow, b + ts).r);
+  return mix(mix(a0, a1, f.x), mix(a2, a3, f.x), f.y);
+}
+
+float cascadeShadow(int i, vec3 wp) {
+  vec4 sc = uObjShadowMats[i] * vec4(wp, 1.0);
   vec3 p = sc.xyz * 0.5 + 0.5;
   if (p.x < 0.0 || p.x > 1.0 || p.y < 0.0 || p.y > 1.0 || p.z > 1.0) return 1.0;
   vec2 ts = 1.0 / vec2(textureSize(uObjShadow, 0));
-  float z = p.z - 0.0025;
-  float s = 0.0;
-  s += step(z, texture(uObjShadow, p.xy + ts * vec2(-0.5, -0.5)).r);
-  s += step(z, texture(uObjShadow, p.xy + ts * vec2(0.5, -0.5)).r);
-  s += step(z, texture(uObjShadow, p.xy + ts * vec2(-0.5, 0.5)).r);
-  s += step(z, texture(uObjShadow, p.xy + ts * vec2(0.5, 0.5)).r);
-  vec2 e = min(p.xy, 1.0 - p.xy);
-  float edge = smoothstep(0.0, 0.06, min(e.x, e.y));
-  return mix(1.0, s * 0.25, edge);
+  float n = uObjShadowCount;
+  vec2 uv = vec2((p.x + float(i)) / n, p.y);
+  // keep the kernel inside this cascade's tile
+  uv.x = clamp(uv.x, (float(i) + 0.002) / n, (float(i) + 0.998) / n);
+  float z = p.z - 0.0004;
+  // soft: four bilinear lookups around the point (penumbra ~2 texels, wider in far cascades automatically)
+  float s = shadowPcf(uv + ts * vec2(-0.6, -0.6), z, ts) + shadowPcf(uv + ts * vec2(0.6, -0.6), z, ts)
+          + shadowPcf(uv + ts * vec2(-0.6, 0.6), z, ts) + shadowPcf(uv + ts * vec2(0.6, 0.6), z, ts);
+  return s * 0.25;
+}
+
+float objShadow(vec3 wp) {
+  if (uObjShadowOn < 0.5) return 1.0;
+  float d = length(wp - cameraPosition);
+  int n = int(uObjShadowCount + 0.5);
+  float far0 = uObjShadowSplits.x, far1 = uObjShadowSplits.y, far2 = uObjShadowSplits.z;
+  float lastFar = n == 1 ? far0 : (n == 2 ? far1 : far2);
+  if (d > lastFar) return 1.0;
+  int i = d < far0 ? 0 : (d < far1 || n < 3 ? 1 : 2);
+  if (i >= n) i = n - 1;
+  float fi = i == 0 ? far0 : (i == 1 ? far1 : far2);
+  float s = cascadeShadow(i, wp);
+  // blend into the next cascade (or fade out after the last) over the last 15 % of this one: no visible seam
+  float f = smoothstep(fi * 0.85, fi, d);
+  if (f > 0.0) s = mix(s, i + 1 < n ? cascadeShadow(i + 1, wp) : 1.0, f);
+  return s;
 }
 
 float hash12(vec2 p) {

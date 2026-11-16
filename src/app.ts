@@ -18,6 +18,8 @@ import worldCfg from './config/world.json';
 import { DriveSession } from './game/driveSession';
 import { buildBody } from './vehicle/vehicleMeshes';
 import { AudioSystem } from './audio/audioSystem';
+import { ObjShadows } from './gfx/shadows';
+import { PostFx } from './gfx/post';
 
 export class App {
   renderer!: THREE.WebGLRenderer;
@@ -36,6 +38,8 @@ export class App {
   fly!: FlyCam;
   drive: DriveSession | null = null;
   audio = new AudioSystem();
+  shadows = new ObjShadows();
+  post = new PostFx();
   vehName = 'patrol';
   flyMode = false;
   time = 0;
@@ -101,6 +105,15 @@ export class App {
       this.scene.add(this.drive.group);
     } else this.flyMode = true;
 
+    this.drive?.spray.mesh && (this.drive.spray.mesh.userData.noShadow = true);
+    this.shadows.setRoots(this.drive ? [this.props.group, this.drive.group] : [this.props.group]);
+    tun('Effects', this.shadows, 'enabled', undefined, undefined, undefined, undefined, 'object shadows');
+    tun('Effects', this.post.fx, 'shimmer');
+    tun('Effects', this.post.fx, 'haze');
+    tun('Effects', this.post.fx, 'hazeDensity', 0, 0.0005, 0.00001);
+    tun('Effects', this.post.fx, 'lensDust');
+    tun('Effects', this.post.fx, 'contrast', 0, 0.5, 0.01);
+    tun('Effects', this.terrain.uniforms.uFx.value, 'y', 0, 1, 1, undefined, 'sand wisps (crests)');
     this.quality.onChange = (nq) => this.applyQuality(nq);
     this.applyQuality(q);
     window.addEventListener('resize', () => this.resize());
@@ -129,6 +142,7 @@ export class App {
   }
 
   applyQuality(q: Quality): void {
+    this.shadows.configure({ size: P.noshadow ? 0 : q.shadowMap, splits: q.shadowSplits });
     this.terrain.setQuality(q);
     this.props?.setQuality(q);
     this.drive?.setQuality(q);
@@ -211,7 +225,9 @@ export class App {
     this.props.update(this.camera.position);
     this.shadowBaker.update(this.renderer, this.tod.version);
     this.renderer.info.reset();
-    this.renderer.render(this.scene, this.camera);
+    this.shadows.update(this.renderer, this.scene, this.camera);
+    if (this.quality.q.post && !P.nopost) this.post.render(this.renderer, this.scene, this.camera, this.quality.q, this.time, this.tod.elevationDeg);
+    else this.renderer.render(this.scene, this.camera);
     this.input.endFrame();
 
     this.statsT += dt;
@@ -227,6 +243,8 @@ export class App {
         `trees ${this.props.stats.ghaf}  shrubs ${this.props.stats.shrub}  tufts ${this.props.stats.tuft}  shadow bake ${this.shadowBaker.bakeMs.toFixed(1)} ms\n` +
         `pos ${c.x.toFixed(0)}, ${c.y.toFixed(0)}, ${c.z.toFixed(0)}  sun ${this.tod.elevationDeg.toFixed(1)}°` +
         (this.drive ? `\nphysics ${this.drive.physMs.toFixed(2)} ms (${this.drive.steps} steps)  deform upload ${this.drive.deformTex.uploadMs.toFixed(2)} ms ${this.drive.deformTex.uploadedTexels} tx  spray ${this.drive.spray.spawned}` : '') +
+        `
+shadows ${this.shadows.renders} maps ${this.shadows.ms.toFixed(2)} ms  post ${this.quality.q.post ? this.post.ms.toFixed(2) + ' ms' : 'off'}` +
         `
 audio ${this.audio.ctx ? this.audio.ctx.state : 'waiting for a click/key'}  update ${this.audio.updateMs.toFixed(2)} ms`;
     }

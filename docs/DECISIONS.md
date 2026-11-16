@@ -66,6 +66,15 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - **W4.5 Autoplay**: AudioContext is created on the first pointer/key/touch; `?mute` keeps master at 0 (used by automated screenshots).
 - **W4.6 CPU measurement** = OfflineAudioContext render of the full graph timed on the main thread (Chrome/Edge have no stable live audio-thread load API).
 
+## W5 — graphics
+- **W5.1 Own cascaded shadow maps** instead of three.js shadow maps: all terrain/props use custom ShaderMaterials, so the shadow lookup lives in the shared ATMO_GLSL; one depth atlas, bounding-sphere fit with texel snapping (stable edges), cascades updated every 1/2/4 frames to fit the UHD 630 budget.
+- **W5.2 Terrain self-shadow stays baked** (W1 shadowBake); only objects use shadow maps. Casters are limited to ~160 m above a cascade slice.
+- **W5.3 One post pass, no TAA**: shimmer + haze + lens dust + contrast + ACES in a single full-screen shader over a half-float target. No temporal accumulation, so no ghosting and nothing to tune for motion.
+- **W5.4 Heat shimmer model**: strength = clamp((sun elevation − 8°)/30°), only beyond ~80 m; offset rejected if it would sample a nearer surface (no halo around the car). ASSUMPTION: visual estimate, not physical refraction.
+- **W5.5 Haze** = exponential extinction (density 1.1e-4 /m, thicker near the horizon) towards a dust colour derived from the sky horizon, brighter towards the sun. ASSUMPTION: visual estimate of Sharqiya dust.
+- **W5.6 Sand wisps** reuse the W1 crest wind-streak shader instead of a particle system (zero extra draw calls).
+- **W5.7 High preset** = renderScale 0.85, finest terrain cell 0.625 m, 3 cascades at 2048: 25–31 FPS on the UHD 630 after two attempts; documented as a discrete-GPU preset instead of cutting its features further.
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).
@@ -75,3 +84,4 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 5. Patrol mass 2500 kg instead of the prompt's ~2.2 t (sources say 2410–2640 kg).
 6. Both vehicles default to automatic (the real LC79 is manual-only).
 7. Audio is judged by tests/spectra only (no one to listen overnight); demo WAVs saved for the morning.
+8. High preset left below 30 FPS on this GPU (W5.7) instead of removing its effects; Low/Medium carry the 30+ FPS target.
