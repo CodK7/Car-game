@@ -2,7 +2,7 @@
 // Layout: game/ (the static site), Play.bat + serve.ps1 (Windows), play.sh (macOS/Linux), README.txt.
 // public/local/ (the user's own third-party models, see public/local/README.md) is never shipped.
 import { build } from 'vite';
-import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -19,6 +19,7 @@ rmSync(zip, { force: true });
 mkdirSync(stage, { recursive: true });
 
 execFileSync(process.execPath, [path.join(root, 'node_modules/typescript/bin/tsc'), '--noEmit'], { cwd: root, stdio: 'inherit' });
+// mode "share": modelBody skips the public/local probe (see src/vehicle/modelBody.ts)
 await build({ root, mode: 'share', logLevel: 'warn', build: { outDir: game, emptyOutDir: true } });
 
 // never ship local-only models
@@ -26,7 +27,14 @@ rmSync(path.join(game, 'local'), { recursive: true, force: true });
 for (const f of walk(game)) {
   if (/\.glb$/i.test(f)) throw new Error(`refusing to ship a model file: ${f}`);
 }
-for (const f of ['Play.bat', 'serve.ps1', 'play.sh', 'README.txt']) cpSync(path.join(here, f), path.join(stage, f));
+
+// fixed line endings whatever git's autocrlf did: CRLF for the Windows files, LF for the shell script
+const LF = String.fromCharCode(10);
+const CRLF = String.fromCharCode(13, 10);
+for (const f of ['Play.bat', 'serve.ps1', 'play.sh', 'README.txt']) {
+  const text = readFileSync(path.join(here, f), 'utf8').split(CRLF).join(LF);
+  writeFileSync(path.join(stage, f), f.endsWith('.sh') ? text : text.split(LF).join(CRLF));
+}
 
 if (process.platform === 'win32' && existsSync('C:/Windows/System32/tar.exe')) {
   // bsdtar writes a standard zip (forward-slash paths) when the name ends in .zip
