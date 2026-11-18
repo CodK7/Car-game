@@ -169,6 +169,12 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
   - The model adds ~256 k triangles. Low stays at 64 FPS on the UHD 630, so there is no LOD yet.
 - **U2.7 Procedural wheels kept** under the model: they carry the sim's spin, steer and suspension travel.
 
+## U3 — shareable zip (2026-11-18)
+
+- **U3.1 Zip + PowerShell server**, chosen by the user over a hosted link. A raw `index.html` cannot run from `file://` (ES modules, `fetch` of terrain, AudioWorklet need http). PowerShell `TcpListener` needs no admin rights (an `HttpListener` URL reservation might).
+- **U3.2 Bound to 127.0.0.1 only**, with no LAN exposure. The port starts at 8080 and the next free one is taken.
+- **U3.3 The shared build never contains `public/local`.** It is deleted after the build, a `.glb` check stops the script, and Vite mode `share` disables the model probe.
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).

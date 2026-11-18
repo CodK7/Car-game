@@ -23,6 +23,7 @@ A realistic open-world dune-bashing ("تطعيس") game set in Ramlat Al Wahiba 
 | Headless smoke test (loads the game in Edge/Chrome, fails on console errors) | `npm run smoke` |
 | Type-check + production build | `npm run build` |
 | Multiplayer server | `npm run server` (WebSocket, port 8787) |
+| Shareable zip for friends (no install; never includes public/local) | `npm run share` → `release/WahibaSands.zip` |
 | Re-encode GIS outputs for the web | `uv run --directory Tools/GIS python ../Web/export_web.py` |
 | GIS pipeline (do NOT rerun unless a parameter changes, ~5-7 min) | `uv run --directory Tools/GIS python -m wahiba_gis all` |
 

@@ -16,6 +16,21 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | W6 — gameplay | DONE | tests green (77), full loop in Edge (`tests/measure_loop.mjs`), MP `tests/measure_net.mjs`, `docs/evidence/w6_*.png` |
 | U1 — language + cars | DONE | 86 tests, smoke 5/5, `docs/evidence/cars_*.png`, Low FPS 72–74 |
 | U2 — local Patrol VTC model | DONE (local only) | 89 tests, smoke with and without the GLB, Low FPS 64 with the model |
+| U3 — shareable zip | DONE | `npm run share` → `release/WahibaSands.zip` (34.7 MB), tested from a clean extract, 0 console errors |
+
+## U3 — shareable zip for friends (DONE, 2026-11-18)
+
+User request: share the game with friends to play on their own PCs (not online play), as a zip.
+
+- `npm run share` (`Tools/Share/make_zip.mjs`): type-check → production build in Vite mode `share` → `release/WahibaSands/game/`.
+  - It deletes `local/`, refuses to finish if any `.glb` is left, adds the launchers and zips with Windows' `tar.exe`.
+  - `release/` is git-ignored.
+- Friends: Extract All → double-click `Play.bat`. It runs `serve.ps1`, a ~70-line static server on 127.0.0.1 written in PowerShell (ships with Windows, nothing to install), and opens the default browser. A served page is needed because browsers block a site's module scripts and data fetches from `file://`.
+- macOS/Linux: `sh play.sh` (python3 http.server). `README.txt` covers both in Arabic and English, plus the Copernicus/OSM credits.
+- In mode `share`, `modelBody` skips the local-model probe (no 404s in the console).
+
+**Evidence:** extracted the zip into an empty folder and ran `serve.ps1 -NoBrowser` there; headless Edge loaded patrol and camry with 0 console errors (59/72 FPS headless). `/local/patrol_vtc.glb` → 404, and the zip contains no `.glb`.
+**Unverified:** Play.bat double-click on another PC (SmartScreen may show "Windows protected your PC" for a downloaded .bat; the README says how to continue). The start screen itself is skipped under automation, so it was not seen in this test.
 
 ## U2 — user's own Patrol VTC model, local only (DONE, 2026-11-18)
 

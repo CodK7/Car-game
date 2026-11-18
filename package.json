@@ -10,6 +10,7 @@
     "test": "vitest run",
     "smoke": "node tests/smoke.mjs",
     "server": "node server/server.mjs",
+    "share": "node Tools/Share/make_zip.mjs",
     "data": "uv run --directory Tools/GIS python ../Web/export_web.py"
   },
   "dependencies": {

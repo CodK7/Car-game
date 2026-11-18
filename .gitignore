@@ -17,3 +17,6 @@ tests/tmp/
 # Local-only imported models (not original/CC0, never committed): see public/local/README.md
 public/local/*
 !public/local/README.md
+
+# Shareable zip built by `npm run share`
+release/

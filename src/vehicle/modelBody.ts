@@ -66,6 +66,8 @@ function materialFor(x: Extras, paintHex: string, map: THREE.Texture | null): TH
  */
 export function attachModel(target: THREE.Group, spec: VehicleSpec, def: ModelDef, paintHex: string, onReady?: (eye: THREE.Vector3 | null) => void): void {
   if (typeof window === 'undefined') return;
+  // the shareable zip (`npm run share`, Vite mode "share") never ships public/local, so do not even probe for it
+  if (import.meta.env.MODE === 'share') return;
   const url = new URL(def.url, document.baseURI).href;
   fetch(url, { method: 'HEAD' })
     .then((r) => {
