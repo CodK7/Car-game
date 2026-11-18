@@ -37,7 +37,7 @@ export interface VehicleSpec {
     thermal?: { ambientC: number; normalC: number; heatPerSecFull: number; coolPerSec: number; derateStartC: number; derateFullC: number; derateMax: number };
   };
   gearbox: { ratios: number[]; reverse: number; final: number; lowRange: number; shiftTime: number; autoUpRpm: number[]; autoDownRpm: number[]; clutchTorque: number; stallRpm: number; converterTR: number };
-  driveline: { efficiency: number; rearLocker: boolean; frontLocker: boolean };
+  driveline: { efficiency: number; rearLocker: boolean; frontLocker: boolean; fwd?: boolean; modes?: DriveMode[]; /** traction control: throttle cut when driven-wheel slip exceeds `slip` (ratio), `gain` cut per unit excess */ tc?: { slip: number; gain: number; minSpeed: number } };
   brakes: { front: number; rear: number; handbrake: number };
   steer: { maxDeg: number; speedReduce: number };
   aero: { cdA: number; liftA: number };
@@ -153,14 +153,27 @@ export class VehicleSim {
   autoGearbox = true;
   shiftTimer = 0;
   gearHold = 0;
+  /** traction control enabled (only acts when the spec has driveline.tc) */
+  tcOn = true;
+  /** current TCS throttle factor (1 = no cut) */
+  tcFactor = 1;
   clutchEngage = 0;
   clutchSlip = 0;
   lockup = false;
+  private lockHold = 0;
   engineTorque = 0;
   /** coolant temperature (°C) and resulting power factor: heat soak on long full-load climbs */
   engineTempC = 90;
   powerFactor = 1;
-  mode: DriveMode = '4H';
+  private _mode: DriveMode = '4H';
+  /** transfer-case mode, limited to the modes the vehicle has (driveline.modes; a FWD sedan only has 2H) */
+  get mode(): DriveMode {
+    return this._mode;
+  }
+  set mode(m: DriveMode) {
+    const ok = this.spec?.driveline.modes ?? ['2H', '4H', '4L'];
+    this._mode = ok.includes(m) ? m : ok.includes('4H') ? '4H' : ok[0];
+  }
   rearLock = false;
   frontLock = false;
   deform: DeformGrid | null = null;
@@ -177,6 +190,7 @@ export class VehicleSim {
 
   constructor(spec: VehicleSpec, readonly ground: SimGround) {
     this.spec = spec;
+    this.mode = this._mode; // clamp the default to the modes this vehicle has
     this.mass = spec.mass;
     const b = spec.body;
     const sc = spec.inertiaScale;
@@ -593,6 +607,17 @@ export class VehicleSim {
     // idle governor: adds fuel below idle, up to full fuel when the engine is being lugged towards a stall
     const idleThr = Math.min(1, Math.max(0, (e.idleRpm * 1.05 - rpm) / 120));
     let thr = this.limiterCut ? 0 : inp.throttle;
+    const tc = spec.driveline.tc;
+    if (tc && this.tcOn) {
+      // TCS: wheel speed of the driven axle vs ground speed; smoothed so the cut does not chatter
+      const f = spec.driveline.fwd ? [W[0], W[1]] : [W[2], W[3]];
+      const vw = Math.max(Math.abs(f[0].omega * f[0].radius), Math.abs(f[1].omega * f[1].radius));
+      const vg = Math.max(Math.abs(this.speed), tc.minSpeed);
+      const excess = Math.max(0, (vw - vg) / vg - tc.slip);
+      const target = Math.max(0, 1 - tc.gain * excess);
+      this.tcFactor += (target - this.tcFactor) * Math.min(1, dt / (target < this.tcFactor ? 0.03 : 0.25));
+    } else this.tcFactor = 1;
+    thr *= this.tcFactor;
     if (this.shiftTimer > 0) thr *= 0.15;
     this.throttleEff = Math.max(thr, idleThr);
     if (e.turbo) {
@@ -617,7 +642,10 @@ export class VehicleSim {
     if (this.shiftTimer > 0) this.shiftTimer -= dt;
     if (this.gearHold > 0) this.gearHold -= dt;
     const ratio = this.totalRatio();
-    const rearAvg = (W[2].omega + W[3].omega) / 2;
+    // primary (always driven) axle: rear for the 4x4s, front for a FWD car (driveline.fwd)
+    const fwd = !!spec.driveline.fwd;
+    const p0 = fwd ? 0 : 2, p1 = fwd ? 1 : 3, s0 = fwd ? 2 : 0, s1 = fwd ? 3 : 1;
+    const rearAvg = (W[p0].omega + W[p1].omega) / 2;
     if (this.autoGearbox && this.gear > 0 && this.shiftTimer <= 0) {
       // output-shaft speed as a TCU sees it, clamped to ground speed (-15 % / +15 % +2 rad/s) so wheelspin or wheel hop does not trigger shifts
       const vOut = Math.abs(this.speed) / W[2].radius;
@@ -661,17 +689,17 @@ export class VehicleSim {
     // J: wheel ω = Σ J[i][k] q[k]
     const J = JM;
     for (let i = 0; i < 4; i++) for (let k = 0; k < 6; k++) J[i][k] = 0;
-    J[2][1] = 1; J[3][1] = 1;
-    if (iDr >= 0) { J[2][iDr] = 1; J[3][iDr] = -1; }
-    J[0][iF] = 1; J[1][iF] = 1;
-    if (iDf >= 0) { J[0][iDf] = 1; J[1][iDf] = -1; }
+    J[p0][1] = 1; J[p1][1] = 1;
+    if (iDr >= 0) { J[p0][iDr] = 1; J[p1][iDr] = -1; }
+    J[s0][iF] = 1; J[s1][iF] = 1;
+    if (iDf >= 0) { J[s0][iDf] = 1; J[s1][iDf] = -1; }
     // current q from wheel speeds
     const q = QV;
     q[0] = this.engineOmega;
-    q[1] = (W[2].omega + W[3].omega) / 2;
-    if (iDr >= 0) q[iDr] = (W[2].omega - W[3].omega) / 2;
-    if (!centerLocked) q[iF] = (W[0].omega + W[1].omega) / 2;
-    if (iDf >= 0) q[iDf] = (W[0].omega - W[1].omega) / 2;
+    q[1] = (W[p0].omega + W[p1].omega) / 2;
+    if (iDr >= 0) q[iDr] = (W[p0].omega - W[p1].omega) / 2;
+    if (!centerLocked) q[iF] = (W[s0].omega + W[s1].omega) / 2;
+    if (iDf >= 0) q[iDf] = (W[s0].omega - W[s1].omega) / 2;
     if (centerLocked) {
       // part-time 4WD: front and rear shafts locked together; snap to the inertia-weighted mean
       const mean = (W[0].omega + W[1].omega + W[2].omega + W[3].omega) / 4;
@@ -707,8 +735,17 @@ export class VehicleSim {
     const sr = this.engineOmega > 1 ? wt / this.engineOmega : 0;
     if (this.autoGearbox) {
       // lock-up clutch in 2nd and above once the converter is nearly coupled
-      if (this.gear >= 2 && sr > 0.9 && this.shiftTimer <= 0) this.lockup = true;
-      else if (sr < 0.8 || this.gear < 2 || this.shiftTimer > 0) this.lockup = false;
+      // state is held for a minimum time so driven-wheel hop cannot make it chatter; stays open while TCS is cutting
+      this.lockHold -= dt;
+      const want = this.lockup
+        ? !(sr < 0.8 || this.gear < 2 || this.shiftTimer > 0)
+        : this.gear >= 2 && sr > 0.9 && this.shiftTimer <= 0 && this.tcFactor > 0.95;
+      if (this.gear < 2 || this.shiftTimer > 0) {
+        this.lockup = false;
+      } else if (want !== this.lockup && this.lockHold <= 0) {
+        this.lockup = want;
+        this.lockHold = 0.6;
+      }
     } else this.lockup = false;
     if (this.autoGearbox && !this.lockup && ratio !== 0 && engage > 0) {
       // torque converter: pump torque = (ω_e / K)², K from the stall speed; turbine torque = TR(sr) · pump torque
@@ -752,7 +789,9 @@ export class VehicleSim {
       this.clutchSlip = Math.min(1, Math.max(0, 1 - sr));
     } else if (ratio !== 0 && cap > 0) {
       const dw = this.engineOmega - ratio * q[1];
-      if (Kc * Math.abs(dw) < cap) {
+      // effective inertia across the clutch: the torque that syncs both sides in one step is Irel·|dw|/dt
+      const Irel = 1 / (1 / Math.max(A[0][0], 1e-3) + (eta * ratio * ratio) / Math.max(A[1][1], 1e-3));
+      if (Kc * Math.abs(dw) < cap || (Irel * Math.abs(dw)) / dt < cap) {
         b[0] -= dt * Kc * dw;
         b[1] += dt * eta * ratio * Kc * dw;
         A[0][0] += dt * Kc;
@@ -761,6 +800,7 @@ export class VehicleSim {
         A[1][1] += dt * eta * ratio * ratio * Kc;
         this.clutchSlip = 0;
       } else {
+        // slipping at full capacity (it cannot sync this step, so the sign of dw cannot flip: no chatter)
         const Tc = cap * Math.sign(dw);
         this.clutchSlip = Math.min(1, Math.abs(dw) / Math.max(this.engineOmega, 1));
         b[0] -= dt * Tc;

@@ -127,6 +127,32 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
   - Start credits: 3000.
 - **W6.9 Photo mode** freezes the simulation, hides the HUD and keeps the orbit camera. Enter saves a PNG of the canvas, read back after the render so the WebGL buffer is valid.
 
+## U1 — language and new cars (2026-11-18)
+
+- **U1.1 Real model names, no logos.** The user asked for named real cars, so the menu uses their real names as descriptions (Toyota Camry, Land Cruiser, Nissan Patrol). The meshes are original approximations from public dimensions. There are no logos, badges or copied designs.
+- **U1.2 No downloaded 3D models.** "Even from outside" was offered by the user. Not taken: free real-car models are almost never CC0 (the project rule), and downloads need approval. Detail comes from the procedural loft generator instead (bodies.json).
+- **U1.3 Camry 2020 GCC V6** (sources: autodata1.com XV70 3.5 V6; motormatchup.com 2020 XLE V6; auto123.com 2020 XLE V6):
+  - 3.5 2GR-FKS: 301 hp, 362 Nm @ 4700.
+  - 8AT ratios 5.519 / 3.184 / 2.05 / 1.492 / 1.235 / 1.0 / 0.801 / 0.673.
+  - Mass 1610 kg; wheelbase 2.825 m; 4885 × 1840 × 1445 mm.
+  - ASSUMPTION: final drive 2.56 (sources disagree: 2.56 vs 3.46).
+  - ASSUMPTION: front weight 61 %, cg 0.54 m.
+  - ASSUMPTION: TCS slip 12 %, gain 4.
+- **U1.4 Land Cruiser 300 GXR 2026 = 4.0 V6.** The user wrote "GXR4", read as the GCC 4.0 V6 (sources: toyota.iq 24MY LC300 spec sheet; drivearabia.com 2026 prices; one dubicars.com listing disagrees).
+  - 1GR-FE: 271 hp (202 kW @ 5200), 385 Nm @ 4400.
+  - 6AT ratios 3.333 / 1.96 / 1.353 / 1.0 / 0.728 / 0.588; final 3.909; low 2.618.
+  - Mass 2480 kg; wheelbase 2.85 m.
+  - Full-time 4WD (modes 4H/4L).
+  - ASSUMPTION: no lockers on GXR.
+- **U1.5 Patrol VTC** ("فتك") = Y61 Super Safari 4.8 (TB48DE): the existing `patrol` preset, relabelled; its physics are unchanged.
+- **U1.6 FWD / modes / TCS are data**: `driveline.fwd`, `driveline.modes`, `driveline.tc` in vehicles.json. The controller refuses unavailable modes (message `ctl.noMode`), and the sim setter clamps them.
+- **U1.7 Lock-up clutch fix**:
+  - The lock-up state is held for 0.6 s and stays open while TCS cuts.
+  - The slipping clutch switches to the implicit locked model when Irel·|Δω|/dt < capacity.
+  - Before this, the explicit ±capacity torque flipped sign each step on light FWD wheels (wheel hop, 0–100 in 14 s). The 4x4 presets keep their results; all tests pass.
+- **U1.8 Start screen is skipped for automation** (`navigator.webdriver` or `?play`) so smoke and measure scripts are unchanged. The browser default language is Arabic and Node defaults to English, so tests run in English.
+- **U1.9 Digits**: Arabic strings use Western digits (0-9). Arabic-Indic digits mixed with Latin model codes (V6, GXR) rendered out of order in RTL.
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).

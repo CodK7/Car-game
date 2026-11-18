@@ -14,6 +14,23 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | W4 — audio | DONE | tests green (50), `tests/measure_audio.mjs`, demos `docs/evidence/w4_demo_*.wav` |
 | W5 — graphics | DONE (High < 30 FPS here) | tests green (53), `docs/evidence/w5_*.png`, `tests/measure_flicker.mjs` |
 | W6 — gameplay | DONE | tests green (77), full loop in Edge (`tests/measure_loop.mjs`), MP `tests/measure_net.mjs`, `docs/evidence/w6_*.png` |
+| U1 — language + cars | DONE | 86 tests, smoke 5/5, `docs/evidence/cars_*.png`, Low FPS 72–74 |
+
+## U1 — Arabic/English, high-detail bodies, three new cars (DONE, 2026-11-18)
+
+User request: pick Arabic or English before the game starts; higher detail on the wagon and the pickup; add a 2020 GCC Camry V6, a 2026 Land Cruiser GXR (4.0 V6) and a Nissan Patrol VTC.
+
+- **Language**: start screen (title, language, car picker, Start button) before the game; the choice is saved (`wahiba.lang`) and can also be changed in the B menu. All UI text is in `src/config/strings.json` (en/ar, same keys + placeholders, tested). Config entries carry `*_ar` fields. The UI is RTL in Arabic. Automation skips the screen (`navigator.webdriver` or `?play`); `?lang=ar|en`.
+- **Cars** (`src/config/vehicles.json`): `patrol` is now labelled Patrol Super Safari VTC (Y61 4.8, same physics), plus `lc300` (GXR 4.0 V6, 6AT, full-time 4WD, 4H/4L only), `camry` (3.5 V6, 8AT, FWD, 2H only, traction control) and `lc70`. The menu and start screen list every preset.
+- **Bodies** (`src/vehicle/vehicleMeshes.ts`, designs in `src/config/bodies.json`): lofted shells from smooth profiles, with exact wheel-arch cut-outs, glass and pillars, an interior (seats, dash, gauges, steering wheel), lamps, grilles, bumpers, mirrors, seams, handles, flares, roof rails, steps, snorkel and a pickup bed. About 37 k triangles per body. **Wheels** (`src/vehicle/wheelMesh.ts`): lathed tyre with AT blocks or highway grooves, multi-spoke / 6-spoke / steel faces, brake disc, lug nuts; about 6–8.5 k triangles each. Original shapes; no logos or badges.
+- **Physics changes**: `driveline.fwd` (primary axle = front), `driveline.modes` (allowed transfer modes), `driveline.tc` (throttle-cut traction control). Lock-up clutch: held state (0.6 s) and stays open while TCS cuts; the slipping clutch locks implicitly whenever it can sync in one step. This fixed a lock-up chatter / wheel-hop limit cycle that the FWD Camry exposed.
+
+**Evidence:** `docs/evidence/cars_{camry,lc300,patrol,lc70}_{front34,rear34,side,nose,cockpit}.png` (`node tests/shots.mjs cars_<veh> "mode=drive&quality=high&nosave&veh=<veh>&lang=ar&play" tests/views/cars.json`). Low preset, real Edge window, UHD 630 (`node tests/bench.mjs low 10 "mode=drive&autodrive&nosave&play&veh=<veh>"`): patrol 72.7, camry 73.6, lc300 71.9 FPS (1 % low 33–37). 0–100 km/h on flat hard ground (sim): Camry 7.1 s (real ~6 s), LC300 ~10 s.
+
+**Open issues (U1):**
+- Camry 0–100 is ~1 s slower than the real car (the final drive is uncertain: 2.56 vs 3.46, see DECISIONS U1.3).
+- Bodies are good procedural approximations, not scans: no external 3D models were downloaded, because real-car models online are almost never CC0 and the project allows only original or CC0 assets.
+- The High preset is still below 30 FPS on this GPU (unchanged from W5).
 
 ## Section A — cleanup (2026-11-16)
 

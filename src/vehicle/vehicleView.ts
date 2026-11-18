@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import type { VehicleSim } from './vehicleSim';
 import { objMaterial } from '../gfx/objMaterial';
+import { detailedWheel, type WheelStyle } from './wheelMesh';
 
 export function wheelMesh(radius: number, width: number): THREE.Group {
   const g = new THREE.Group();
@@ -74,8 +75,16 @@ export class VehicleView {
       this.body.add(box, nose);
     }
     this.group.add(this.body);
+    const style = bodyMesh?.userData.wheelStyle as WheelStyle | undefined;
     for (const w of sim.wheels) {
-      const m = wheelMesh(w.radius, w.width);
+      let m: THREE.Group;
+      if (style) {
+        // detailed wheel: show face looks to +x, so left wheels are turned around inside the spinning group
+        m = new THREE.Group();
+        const inner = detailedWheel(w.radius, w.width, style, s.tyre.sidewall_m);
+        if (w.left) inner.rotation.y = Math.PI;
+        m.add(inner);
+      } else m = wheelMesh(w.radius, w.width);
       this.wheels.push(m);
       this.group.add(m);
     }

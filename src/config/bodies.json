@@ -1,0 +1,86 @@
+{
+  "_doc": "Procedural body designs (src/vehicle/vehicleMeshes.ts). u = metres back from the front bumper, v = metres above the ground, plan = fraction of half the body width. lower = body below the window line (bumpers, bonnet, doors, boot); cabin = glasshouse from the windscreen base (u0) to the rear glass base (u3). pillars are side-window bands [u0, u1] drawn as 'paint' or 'black'. Shapes are original approximations from public dimensions; no logos or badges.",
+  "camry": {
+    "style": "sedan",
+    "paint": "#d9dadb",
+    "widthCore": 1.0,
+    "lower": {
+      "top": [[0, 0.6], [0.08, 0.675], [0.2, 0.735], [0.45, 0.775], [0.9, 0.83], [1.55, 0.925], [2.2, 0.965], [3.3, 0.995], [3.95, 1.01], [4.12, 1.025], [4.55, 1.035], [4.78, 1.005], [4.885, 0.9]],
+      "bottom": [[0, 0.3], [0.15, 0.205], [0.4, 0.185], [4.55, 0.2], [4.8, 0.31], [4.885, 0.4]],
+      "plan": [[0, 0.8], [0.12, 0.915], [0.35, 0.975], [0.8, 1.0], [4.2, 1.0], [4.6, 0.97], [4.8, 0.905], [4.885, 0.85]],
+      "cornerR": 0.12, "crown": 0.035, "tuck": 0.075, "tuckV": 0.5, "blackBelowV": 0.27
+    },
+    "cabin": {
+      "u0": 1.55, "u3": 4.12, "screenTop": 2.45, "roofEnd": 3.5,
+      "top": [[1.55, 0.925], [1.75, 1.075], [2.1, 1.3], [2.45, 1.42], [2.9, 1.445], [3.3, 1.435], [3.6, 1.375], [3.85, 1.22], [4.05, 1.075], [4.12, 1.025]],
+      "tumble": 0.17, "cornerR": 0.11,
+      "pillars": [[1.55, 1.86, "black"], [2.74, 2.83, "black"], [3.62, 4.12, "paint"]],
+      "belt": "chrome"
+    },
+    "wheel": { "style": "multispoke", "spokes": 10, "rim": "#9a9ea4", "face": "#2b2d31", "lip": "#c9ccd0" }
+  },
+  "lc300": {
+    "style": "suv",
+    "paint": "#dddbd5",
+    "widthCore": 0.975,
+    "lower": {
+      "top": [[0, 0.98], [0.05, 1.07], [0.15, 1.1], [0.9, 1.13], [1.42, 1.17], [2.4, 1.2], [4.0, 1.22], [4.9, 1.22], [4.985, 1.18]],
+      "bottom": [[0, 0.48], [0.25, 0.4], [0.5, 0.39], [4.6, 0.4], [4.9, 0.5], [4.985, 0.56]],
+      "plan": [[0, 0.92], [0.1, 0.97], [0.3, 1.0], [4.7, 1.0], [4.9, 0.97], [4.985, 0.93]],
+      "cornerR": 0.11, "crown": 0.03, "tuck": 0.05, "tuckV": 0.62, "blackBelowV": 0.0
+    },
+    "cabin": {
+      "u0": 1.42, "u3": 4.95, "screenTop": 2.3, "roofEnd": 4.78,
+      "top": [[1.42, 1.17], [1.6, 1.36], [1.85, 1.62], [2.15, 1.84], [2.35, 1.895], [2.8, 1.91], [4.2, 1.905], [4.72, 1.885], [4.86, 1.75], [4.95, 1.24]],
+      "tumble": 0.12, "cornerR": 0.1,
+      "pillars": [[1.42, 1.78, "black"], [2.58, 2.68, "black"], [3.58, 3.68, "black"], [4.42, 4.95, "paint"]],
+      "belt": "chrome"
+    },
+    "flares": { "mat": "black", "width": 0.07, "out": 0.035 },
+    "roofRails": true, "sideSteps": true,
+    "wheel": { "style": "spoke", "spokes": 6, "rim": "#c6c9cc", "face": "#c6c9cc", "lip": "#d9dbdd" }
+  },
+  "patrol": {
+    "style": "suv",
+    "paint": "#d8d4ca",
+    "widthCore": 0.95,
+    "lower": {
+      "top": [[0, 0.96], [0.04, 1.055], [0.1, 1.08], [1.3, 1.12], [1.4, 1.13], [2.3, 1.16], [5.0, 1.17], [5.05, 1.13]],
+      "bottom": [[0, 0.45], [0.2, 0.41], [0.5, 0.42], [4.7, 0.43], [4.95, 0.5], [5.05, 0.55]],
+      "plan": [[0, 0.93], [0.08, 0.975], [0.25, 1.0], [4.9, 1.0], [5.0, 0.97], [5.05, 0.94]],
+      "cornerR": 0.075, "crown": 0.02, "tuck": 0.03, "tuckV": 0.6, "blackBelowV": 0.0
+    },
+    "cabin": {
+      "u0": 1.4, "u3": 5.02, "screenTop": 2.15, "roofEnd": 4.93,
+      "top": [[1.4, 1.13], [1.55, 1.3], [1.8, 1.55], [2.05, 1.755], [2.2, 1.79], [4.9, 1.795], [4.96, 1.74], [5.02, 1.25]],
+      "tumble": 0.1, "cornerR": 0.075,
+      "pillars": [[1.4, 1.62, "paint"], [2.56, 2.67, "black"], [3.6, 3.72, "black"], [4.55, 5.02, "paint"]],
+      "belt": "black"
+    },
+    "flares": { "mat": "paint", "width": 0.085, "out": 0.045 },
+    "roofRails": true, "sideSteps": true,
+    "wheel": { "style": "spoke", "spokes": 6, "rim": "#b9bcbf", "face": "#b9bcbf", "lip": "#cfd1d3" }
+  },
+  "lc70": {
+    "style": "pickup",
+    "paint": "#dad6cd",
+    "widthCore": 0.94,
+    "bedU": 2.66,
+    "lower": {
+      "top": [[0, 0.98], [0.04, 1.075], [0.1, 1.1], [1.35, 1.14], [2.4, 1.18], [5.17, 1.18], [5.22, 1.15]],
+      "bottom": [[0, 0.48], [0.2, 0.445], [0.5, 0.45], [5.0, 0.55], [5.22, 0.6]],
+      "plan": [[0, 0.94], [0.08, 0.98], [0.25, 1.0], [5.22, 1.0]],
+      "cornerR": 0.06, "crown": 0.015, "tuck": 0.02, "tuckV": 0.6, "blackBelowV": 0.0
+    },
+    "cabin": {
+      "u0": 1.35, "u3": 2.6, "screenTop": 2.0, "roofEnd": 2.5,
+      "top": [[1.35, 1.14], [1.5, 1.32], [1.75, 1.6], [1.95, 1.84], [2.05, 1.9], [2.45, 1.9], [2.55, 1.85], [2.6, 1.3]],
+      "tumble": 0.09, "cornerR": 0.07,
+      "pillars": [[1.35, 1.56, "paint"], [2.33, 2.6, "paint"]],
+      "belt": "black"
+    },
+    "flares": { "mat": "black", "width": 0.1, "out": 0.05 },
+    "snorkel": true, "sideSteps": true,
+    "wheel": { "style": "steel", "spokes": 6, "rim": "#d4d5d2", "face": "#d4d5d2", "lip": "#d4d5d2" }
+  }
+}

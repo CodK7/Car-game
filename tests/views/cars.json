@@ -1,0 +1,28 @@
+[
+ {
+  "name": "front34",
+  "wait": 3,
+  "tod": 15.6,
+  "js": "a.drive.sim.input.brake = 1; a.drive.cam.orbitHold = true; a.drive.cam.yawOff = 2.45; a.drive.cam.pitchOff = 0.12; a.drive.cam.distance = 4.6; a.drive.cam.height = 0.2; document.getElementById('help').style.display='none';"
+ },
+ {
+  "name": "rear34",
+  "wait": 2,
+  "js": "a.drive.cam.yawOff = 0.75; a.drive.cam.pitchOff = 0.14; a.drive.cam.distance = 6.2;"
+ },
+ {
+  "name": "side",
+  "wait": 2,
+  "js": "a.drive.cam.yawOff = 1.5708; a.drive.cam.pitchOff = 0.05; a.drive.cam.distance = 5.2;"
+ },
+ {
+  "name": "nose",
+  "wait": 2,
+  "js": "a.drive.cam.yawOff = 2.95; a.drive.cam.pitchOff = 0.02; a.drive.cam.distance = 4.0;"
+ },
+ {
+  "name": "cockpit",
+  "wait": 2,
+  "js": "a.drive.cam.mode = 'cockpit';"
+ }
+]

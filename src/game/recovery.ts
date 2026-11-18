@@ -7,6 +7,7 @@ import cfg from '../config/recovery.json';
 import { Rope, RopeKind } from './rope';
 import { getSpec, VehicleSim } from '../vehicle/vehicleSim';
 import type { DeformGrid } from '../sand/deformGrid';
+import { t, tf } from '../core/i18n';
 
 export type HookSide = 'front' | 'rear';
 
@@ -69,7 +70,7 @@ export class Recovery {
     const dist = p.distanceTo(this.anchor);
     this.rope = Rope.of(kind, Math.min(cfg.ropes[kind].length, dist + 0.3));
     this.kind = kind;
-    this.say(`${cfg.ropes[kind].label} to a sand anchor (${dist.toFixed(0)} m)`);
+    this.say(t('rec.anchor', tf(cfg.ropes[kind], 'label'), dist.toFixed(0)));
   }
 
   /** Create the AI partner (if needed) parked behind/ahead of the player and connect a strap or tow rope. */
@@ -97,7 +98,7 @@ export class Recovery {
     this.rope = Rope.of(kind);
     this.kind = kind;
     this.partnerDrive = false;
-    this.say(`${cfg.ropes[kind].label} to the recovery car — press T again to pull`);
+    this.say(t('rec.partner', tf(cfg.ropes[kind], 'label')));
     return partner;
   }
 
@@ -115,7 +116,7 @@ export class Recovery {
     const dist = worldPoint(sim, this.playerHook, tA).distanceTo(worldPoint(other, this.partnerHook, tB));
     this.rope = Rope.of(kind, Math.max(dist + 0.5, cfg.ropes[kind].length));
     this.kind = kind;
-    this.say(`${cfg.ropes[kind].label} hooked to the stuck car: drive away gently, then build speed for the snatch`);
+    this.say(t('rec.stranded', tf(cfg.ropes[kind], 'label')));
   }
 
   /** Multiplayer: rope to another player's (ghost) vehicle with the server's rest length and hook sides. */
@@ -128,11 +129,11 @@ export class Recovery {
     this.partnerRole = 'remote';
     this.rope = Rope.of(kind, rest);
     this.kind = kind;
-    this.say(`${cfg.ropes[kind].label} to another player`);
+    this.say(t('rec.remote', tf(cfg.ropes[kind], 'label')));
   }
 
   release(say = true): void {
-    if (this.rope && say) this.say(this.rope.broken ? 'Rope broke!' : 'Rope released');
+    if (this.rope && say) this.say(this.rope.broken ? t('rec.broke') : t('rec.released'));
     this.rope = null;
     this.kind = null;
     this.anchor = null;
@@ -161,7 +162,7 @@ export class Recovery {
     }
     if (this.rope && this.anchor) this.applyRope(dt);
     if (this.rope?.broken) {
-      this.say('Rope broke! (over its breaking strength)');
+      this.say(t('rec.brokeMbs'));
       const r = this.rope;
       this.release(false);
       this.lastBroken = r;
@@ -241,14 +242,14 @@ export class Recovery {
     if (!this.player) return;
     this.digging = true;
     this.digT = 0;
-    this.say('Digging… (stay stopped)');
+    this.say(t('rec.digging'));
   }
 
   private digStep(sim: VehicleSim, grid: DeformGrid | null, dt: number): void {
     const d = cfg.dig;
     if (Math.abs(sim.speed) > 0.5) {
       this.digging = false;
-      this.say('Digging stopped (vehicle moved)');
+      this.say(t('rec.digStopped'));
       return;
     }
     this.digT += dt;
@@ -270,7 +271,7 @@ export class Recovery {
     if (this.digT >= d.seconds) {
       this.digging = false;
       this.digs++;
-      this.say('Dug out around the wheels and under the belly');
+      this.say(t('rec.dug'));
     }
   }
 

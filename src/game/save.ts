@@ -1,6 +1,7 @@
 // Save game in localStorage (versioned JSON). Pure logic with an injectable storage so Vitest can run it in Node.
 import parts from '../config/parts.json';
 import { Build, option, SlotName, stockOption, SLOT_NAMES } from './garage';
+import { t } from '../core/i18n';
 
 export interface SaveData {
   v: 1;
@@ -58,9 +59,9 @@ export function owns(d: SaveData, veh: string, slot: SlotName, id: string): bool
 /** Buy (if needed) and fit a part. Returns an error message or null. */
 export function fitPart(d: SaveData, veh: string, slot: SlotName, id: string): string | null {
   const opt = option(slot, id);
-  if (!opt) return 'Unknown part';
+  if (!opt) return t('save.unknown');
   if (!owns(d, veh, slot, id)) {
-    if (d.credits < opt.price) return `Not enough credits (${opt.price} needed)`;
+    if (d.credits < opt.price) return t('save.credits', opt.price);
     d.credits -= opt.price;
     (d.owned[veh] ??= []).push(`${slot}:${id}`);
   }

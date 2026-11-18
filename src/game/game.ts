@@ -8,6 +8,11 @@ import { loadSave, writeSave, fitPart, buildOf, owns, SaveData } from './save';
 import { buildSpec, LIVERIES, SLOTS, SLOT_NAMES, SlotName, peakPowerKW } from './garage';
 import { MissionRunner, MISSIONS } from './missions';
 import { P } from '../core/params';
+import { t, tf, getLang, setLang, isRtl, Lang } from '../core/i18n';
+import { PRESETS } from '../vehicle/vehicleSim';
+
+/** player vehicles in menu order (vehicles.json keys) */
+export const VEHICLES = Object.keys(PRESETS).filter((k) => !k.startsWith('_'));
 
 const CSS = `
 #panel { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(860px,94vw); max-height:86vh; overflow:auto; background:rgba(24,17,11,.93); border:1px solid var(--line); border-radius:12px; padding:14px 18px; font:13px/1.45 "Segoe UI",system-ui,sans-serif; display:none; }
@@ -23,12 +28,16 @@ const CSS = `
 #panel .d { color:var(--dim); font-size:12px; }
 #panel .card { font:12px/1.5 Consolas,monospace; color:var(--dim); white-space:pre; }
 #panel .err { color:var(--bad); min-height:1.3em; }
+#panel[dir=rtl] { font-family:"Segoe UI",Tahoma,system-ui,sans-serif; }
+#panel[dir=rtl] .card { direction:rtl; white-space:normal; }
 `;
 
 export class Game {
   save: SaveData = loadSave();
   missions = new MissionRunner(this.save);
   open = false;
+  /** start screen visible: no game keys, physics paused */
+  locked = false;
   photo = false;
   private panel: HTMLDivElement;
   private beacon: THREE.Mesh;
@@ -63,8 +72,7 @@ export class Game {
     window.addEventListener('beforeunload', () => writeSave(this.save));
     // apply the saved build to the starting vehicle
     this.applyVehicle(P.veh ? drive.kind : this.save.vehicle);
-    const help = document.getElementById('help');
-    if (help) help.textContent += ' · B menu (missions, garage) · P photo';
+    this.applyHelp();
   }
 
   get busy(): boolean {
@@ -72,6 +80,10 @@ export class Game {
   }
 
   update(dt: number, input: Input): void {
+    if (this.locked) {
+      this.drive.blocked = true;
+      return;
+    }
     if (input.hit('KeyB') || (this.open && input.hit('Escape'))) this.toggle();
     if (input.hit('KeyP')) this.setPhoto(!this.photo);
     if (this.photo) {
@@ -110,7 +122,7 @@ export class Game {
     a.href = url;
     a.download = `wahiba_${new Date().toISOString().replace(/[:.]/g, '-')}.png`;
     a.click();
-    this.drive.flash('Photo saved');
+    this.drive.flash(t('game.photoSaved'));
   }
 
   private setPhoto(on: boolean): void {
@@ -121,7 +133,7 @@ export class Game {
       this.hidden = ['hud', 'help', 'stats'].map((id) => document.getElementById(id)!).filter((e) => e && e.style.display !== 'none');
       for (const e of this.hidden) e.style.visibility = 'hidden';
       this.drive.cam.orbitHold = true;
-      this.drive.flash('Photo mode: drag to orbit, wheel to zoom, , . time of day, Enter save, P exit');
+      this.drive.flash(t('game.photoHelp'));
     } else {
       for (const e of this.hidden) e.style.visibility = '';
       this.drive.cam.orbitHold = false;
@@ -141,18 +153,18 @@ export class Game {
 
   private missionHud(): string {
     const m = this.missions;
-    if (m.status !== 'running' || m.def.type === 'free') return `\ncredits ${this.save.credits}`;
+    if (m.status !== 'running' || m.def.type === 'free') return '\n' + t('hud.credits', this.save.credits);
     const d = m.def, sim = this.drive.sim;
-    let line = `\n${d.title}\n${m.time.toFixed(1)}${d.timeLimit ? ' / ' + d.timeLimit : ''} s`;
-    const t = m.target();
-    if (t) {
-      const dx = t.x - sim.pos.x, dz = t.z - sim.pos.z;
+    let line = `\n${tf(d, 'title')}\n${m.time.toFixed(1)}${d.timeLimit ? ' / ' + d.timeLimit : ''} s`;
+    const tg = m.target();
+    if (tg) {
+      const dx = tg.x - sim.pos.x, dz = tg.z - sim.pos.z;
       const dist = Math.hypot(dx, dz);
       const ang = Math.atan2(sim.fwd.x * dz - sim.fwd.z * dx, sim.fwd.x * dx + sim.fwd.z * dz); // + = target to the right
       const arrows = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖'];
       const idx = (Math.round(ang / (Math.PI / 4)) + 8) % 8;
       line += `  ${arrows[idx]} ${dist.toFixed(0)} m`;
-      if (d.gates && d.gates.length > 1) line += `  cp ${m.gate + 1}/${d.gates.length}`;
+      if (d.gates && d.gates.length > 1) line += '  ' + t('hud.cp', m.gate + 1, d.gates.length);
     }
     return line;
   }
@@ -177,8 +189,9 @@ export class Game {
     this.err = '';
     if (act === 'close') return this.toggle();
     if (act === 'veh') this.applyVehicle(a1);
+    if (act === 'lang') this.setLanguage(a1 as Lang);
     if (act === 'part') {
-      if (Math.abs(this.drive.sim.speed) > 1) this.err = 'Stop the vehicle to change parts';
+      if (Math.abs(this.drive.sim.speed) > 1) this.err = t('game.stopParts');
       else {
         const r = fitPart(this.save, veh, a1 as SlotName, a2);
         if (r) this.err = r;
@@ -218,29 +231,55 @@ export class Game {
     const s = this.save, veh = this.drive.kind, spec = this.drive.sim.spec;
     const m = this.missions;
     const btn = (a: string, label: string, on = false, cls = '') => `<button data-a="${a}" class="${on ? 'on' : ''} ${cls}">${label}</button>`;
-    let h = `<h2><span>Wahiba Sands Off-Road</span><span>credits <b>${s.credits}</b> · ${s.done.length}/${MISSIONS.length - 1} missions · ${btn('close', 'Close (B)')}</span></h2>`;
+    let h = `<h2><span>${t('menu.title')}</span><span>${t('menu.credits')} <b>${s.credits}</b> · ${t('menu.missionsCount', s.done.length, MISSIONS.length - 1)} · ${btn('close', t('menu.close'))}</span></h2>`;
+    h += `<div class="row"><span class="lbl">${t('menu.language')}</span>${btn('lang:ar', 'العربية', getLang() === 'ar')}${btn('lang:en', 'English', getLang() === 'en')}</div>`;
     h += `<div class="err">${this.err}</div>`;
-    h += `<h3>Missions</h3>`;
-    if (m.status === 'running' && m.def.type !== 'free') h += `<div class="row">Running: ${m.def.title} ${btn('stop', 'Stop mission')}</div>`;
+    h += `<h3>${t('menu.missions')}</h3>`;
+    if (m.status === 'running' && m.def.type !== 'free') h += `<div class="row">${t('menu.running', tf(m.def, 'title'))} ${btn('stop', t('menu.stop'))}</div>`;
     for (const d of MISSIONS) {
       const best = s.best[d.id];
-      h += `<div class="m"><div><b>${d.title}</b>${s.done.includes(d.id) ? ' ✓' : ''}<div class="d">${d.desc}${d.reward ? ` · reward ${d.reward}` : ''}${d.goldTime ? ` (gold under ${d.goldTime} s: x1.5)` : ''}${best !== undefined ? ` · best ${best.toFixed(1)} s` : ''}</div></div>${btn('start:' + d.id, 'Start')}</div>`;
+      h += `<div class="m"><div><b>${tf(d, 'title')}</b>${s.done.includes(d.id) ? ' ✓' : ''}<div class="d">${tf(d, 'desc')}${d.reward ? t('menu.reward', d.reward) : ''}${d.goldTime ? t('menu.gold', d.goldTime) : ''}${best !== undefined ? t('menu.best', best.toFixed(1)) : ''}</div></div>${btn('start:' + d.id, t('menu.start'))}</div>`;
     }
-    h += `<h3>Vehicle</h3><div class="row">${btn('veh:patrol', 'Desert wagon (I6)', veh === 'patrol')}${btn('veh:lc70', 'Pickup (V8 diesel)', veh === 'lc70')}</div>`;
-    h += `<div class="card">mass ${spec.mass.toFixed(0)} kg · peak ${peakPowerKW(spec).toFixed(0)} kW${spec.engine.turbo ? ' turbo' : ''} · tyre ${(spec.tyre.width * 1000).toFixed(0)} mm · travel F/R ${(spec.susp.front.travel * 1000).toFixed(0)}/${(spec.susp.rear.travel * 1000).toFixed(0)} mm · final ${spec.gearbox.final.toFixed(2)} · low ${spec.gearbox.lowRange.toFixed(2)} · lockers ${spec.driveline.rearLocker ? 'R' : '-'}${spec.driveline.frontLocker ? 'F' : '-'}</div>`;
-    h += `<h3>Garage</h3>`;
+    h += `<h3>${t('menu.vehicle')}</h3><div class="row">${VEHICLES.map((k) => btn('veh:' + k, tf(PRESETS[k], 'name'), veh === k)).join('')}</div>`;
+    const lockers = `${spec.driveline.rearLocker ? 'R' : '-'}${spec.driveline.frontLocker ? 'F' : '-'}`;
+    h += `<div class="card">${t('menu.card', spec.mass.toFixed(0), peakPowerKW(spec).toFixed(0), spec.engine.turbo ? t('menu.turbo') : '', (spec.tyre.width * 1000).toFixed(0), (spec.susp.front.travel * 1000).toFixed(0), (spec.susp.rear.travel * 1000).toFixed(0), spec.gearbox.final.toFixed(2), spec.gearbox.lowRange.toFixed(2), lockers)} · ${driveText(spec)}</div>`;
+    h += `<h3>${t('menu.garage')}</h3>`;
     const build = buildOf(s, veh);
     for (const slot of SLOT_NAMES) {
-      h += `<div class="row"><span class="lbl">${SLOTS[slot].label}</span>`;
+      h += `<div class="row"><span class="lbl">${tf(SLOTS[slot], 'label')}</span>`;
       for (const [id, o] of Object.entries(SLOTS[slot].options)) {
         const own = owns(s, veh, slot, id);
-        h += btn(`part:${slot}:${id}`, `${o.label}${own ? '' : ` · ${o.price}`}`, build[slot] === id, own ? '' : 'locked');
+        h += btn(`part:${slot}:${id}`, `${tf(o, 'label')}${own ? '' : ` · ${o.price}`}`, build[slot] === id, own ? '' : 'locked');
       }
       h += `</div>`;
     }
-    h += `<div class="row"><span class="lbl">Livery (cosmetic)</span>`;
-    for (const [id, l] of Object.entries(LIVERIES)) h += btn('livery:' + id, `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${l.paint};margin-right:5px"></span>${l.label}`, (s.livery[veh] ?? '') === id);
-    h += `</div><div class="d" style="margin-top:10px">Recovery: H winch to a sand anchor (hold J reel in, U pay out) · T recovery car / strap to a stuck car (T again: pull, again: release) · G dig · [ ] air down/up. Progress saves automatically in this browser.</div>`;
+    h += `<div class="row"><span class="lbl">${t('menu.livery')}</span>`;
+    for (const [id, l] of Object.entries(LIVERIES)) h += btn('livery:' + id, `<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${l.paint};margin-inline-end:5px"></span>${tf(l, 'label')}`, (s.livery[veh] ?? '') === id);
+    h += `</div><div class="d" style="margin-top:10px">${t('menu.help')}</div>`;
+    this.panel.dir = isRtl() ? 'rtl' : 'ltr';
     this.panel.innerHTML = h;
   }
+  /** switch the UI language (start screen and menu) and refresh every text on screen */
+  setLanguage(l: Lang): void {
+    setLang(l);
+    this.applyHelp();
+    if (this.open) this.render();
+  }
+
+  applyHelp(): void {
+    const help = document.getElementById('help');
+    if (help) {
+      help.textContent = t('help.drive') + t('help.game');
+      help.dir = isRtl() ? 'rtl' : 'ltr';
+    }
+    const hud = document.getElementById('hud');
+    if (hud) hud.dir = isRtl() ? 'rtl' : 'ltr';
+  }
+}
+
+/** one-line drive description for menus */
+export function driveText(spec: { driveline: { fwd?: boolean; modes?: string[] } }): string {
+  if (spec.driveline.fwd) return t('drive.fwd');
+  const m = spec.driveline.modes ?? ['2H', '4H', '4L'];
+  return m.includes('2H') ? t('drive.4wd') : t('drive.full');
 }

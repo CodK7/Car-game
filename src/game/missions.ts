@@ -3,6 +3,7 @@
 import data from '../config/missions.json';
 import { getSpec, VehicleSim, SimGround } from '../vehicle/vehicleSim';
 import type { SaveData } from './save';
+import { t, tf } from '../core/i18n';
 
 export interface Gate { x: number; z: number; r: number }
 export interface MissionDef {
@@ -65,7 +66,7 @@ export class MissionRunner {
       this.stranded = v;
       this.strandedStart = { x: s.x, z: s.z };
     }
-    this.say(def.title + (def.timeLimit ? ` · ${def.timeLimit} s` : ''));
+    this.say(tf(def, 'title') + (def.timeLimit ? t('mis.timeLimit', def.timeLimit) : ''));
     return def;
   }
 
@@ -94,13 +95,13 @@ export class MissionRunner {
         this.paidKm = whole;
         this.save.credits += n * (d.creditsPerKm ?? 0);
         this.save.odoKm += n;
-        this.say(`+${n * (d.creditsPerKm ?? 0)} credits (${whole} km)`);
+        this.say(t('mis.creditsKm', n * (d.creditsPerKm ?? 0), whole));
       }
       return;
     }
     if (d.timeLimit && this.time > d.timeLimit) {
       this.status = 'failed';
-      this.say('Out of time');
+      this.say(t('mis.outOfTime'));
       return;
     }
     if (d.type === 'recovery') {
@@ -112,7 +113,7 @@ export class MissionRunner {
     if (g && Math.hypot(player.pos.x - g.x, player.pos.z - g.z) < g.r) {
       this.gate++;
       if (this.gate >= (d.gates?.length ?? 0)) this.win();
-      else this.say(`Checkpoint ${this.gate}/${d.gates!.length}  ${this.time.toFixed(1)} s`);
+      else this.say(t('mis.checkpoint', this.gate, d.gates!.length, this.time.toFixed(1)));
     }
   }
 
@@ -125,7 +126,7 @@ export class MissionRunner {
     const best = this.save.best[d.id];
     if (best === undefined || this.time < best) this.save.best[d.id] = +this.time.toFixed(2);
     if (!this.save.done.includes(d.id)) this.save.done.push(d.id);
-    this.say(`${d.title}: done in ${this.time.toFixed(1)} s · +${reward} credits${d.goldTime && this.time <= d.goldTime ? ' (gold)' : ''}`);
+    this.say(t('mis.done', tf(d, 'title'), this.time.toFixed(1), reward) + (d.goldTime && this.time <= d.goldTime ? t('mis.gold') : ''));
   }
 
   say(m: string): void {

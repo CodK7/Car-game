@@ -6,12 +6,13 @@
 import * as THREE from 'three';
 import type { DriveSession, BodyFactory } from './driveSession';
 import type { AudioSystem } from '../audio/audioSystem';
-import { getSpec, VehicleSim } from '../vehicle/vehicleSim';
+import { getSpec, PRESETS, VehicleSim } from '../vehicle/vehicleSim';
 import { VehicleView } from '../vehicle/vehicleView';
 import { hookLocal, HookSide } from './recovery';
 import { Interp, ServerClock } from './netInterp';
 import type { RopeKind } from './rope';
 import audioCfg from '../config/audio.json';
+import { t } from '../core/i18n';
 
 interface Remote { id: number; kind: string; ghost: VehicleSim; view: VehicleView; interp: Interp; seen: number; rpm: number; thr: number }
 interface NetRope { a: number; b: number; sa: number; sb: number; kind: RopeKind; rest: number; tension: number; broken: boolean }
@@ -59,10 +60,10 @@ export class NetClient {
     if (m.t === 'welcome') {
       this.id = m.id;
       this.clock.observe(m.time, local);
-      this.say(`Online: you are player ${m.id} (max ${m.max})`);
+      this.say(t('net.online', m.id, m.max));
     } else if (m.t === 'full') {
       this.status = 'room full';
-      this.say(`Server full (${m.max} players)`);
+      this.say(t('net.full', m.max));
     } else if (m.t === 'snap') {
       this.clock.observe(m.time, local);
       const ids = new Set<number>();
@@ -72,12 +73,12 @@ export class NetClient {
         let r = this.remotes.get(p.id);
         if (!r || r.kind !== p.kind) {
           if (r) this.drop(r);
-          const ghost = new VehicleSim(getSpec(p.kind in { patrol: 1, lc70: 1 } ? p.kind : 'patrol'), this.drive.ground);
+          const ghost = new VehicleSim(getSpec(p.kind in PRESETS ? p.kind : 'patrol'), this.drive.ground);
           const view = new VehicleView(ghost, this.bodyFactory ? this.bodyFactory(ghost, p.kind, p.paint ?? undefined) : null);
           this.drive.group.add(view.group);
           r = { id: p.id, kind: p.kind, ghost, view, interp: new Interp(), seen: local, rpm: 0, thr: 0 };
           this.remotes.set(p.id, r);
-          this.say(`Player ${p.id} joined`);
+          this.say(t('net.joined', p.id));
         }
         r.seen = local;
         r.rpm = p.s.rpm;
@@ -96,7 +97,7 @@ export class NetClient {
     if (mine && mine.broken) {
       if (rec.partnerRole === 'remote' && rec.rope) {
         rec.release(false);
-        this.say(`Rope broke! (server: over ${(mine.kind === 'strap' ? 78 : 60)} kN)`);
+        this.say(t('net.broke', mine.kind === 'strap' ? 78 : 60));
       }
     } else if (mine) {
       const otherId = mine.a === this.id ? mine.b : mine.a;
@@ -135,7 +136,7 @@ export class NetClient {
     }
     if (!best) return false;
     this.ws.send(JSON.stringify({ t: 'rope', to: best.id, kind: 'strap' }));
-    this.say(`Strap to player ${best.id} requested`);
+    this.say(t('net.strap', best.id));
     return true;
   }
 
@@ -169,8 +170,8 @@ export class NetClient {
 
   hudLine(): string {
     const n = this.remotes.size + (this.status === 'online' ? 1 : 0);
-    const r = this.rope ? `  rope ${(this.rope.tension / 1000).toFixed(1)} kN (server)` : '';
-    return `\n${this.status}${this.status === 'online' ? ` · ${n} player${n === 1 ? '' : 's'}` : ''}${r}`;
+    const r = this.rope ? '  ' + t('net.rope', (this.rope.tension / 1000).toFixed(1)) : '';
+    return `\n${this.status}${this.status === 'online' ? ' · ' + t('net.players', n) : ''}${r}`;
   }
 
   say(m: string): void {

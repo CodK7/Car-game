@@ -1,15 +1,15 @@
 {
   "_note": "Missions on the real terrain near the spawn (coordinates in world metres, x east, z south; heading in compass degrees). Crests found with a local-maximum search over the DEM (see DECISIONS W6.5).",
   "missions": [
-    { "id": "free", "type": "free", "title": "Free roam", "desc": "Drive anywhere in the 20 km of Ramlat Al Wahiba. Credits for every kilometre off-road.", "creditsPerKm": 40 },
-    { "id": "ta_west", "type": "timeAttack", "title": "Time attack: west dune", "desc": "Climb 22 m to the crest west of the corridor.",
+    { "id": "free", "type": "free", "title": "Free roam", "title_ar": "القيادة الحرة", "desc_ar": "طعّس وين ما تبي في 20 كم من رملة آل وهيبة. تاخذ رصيد على كل كيلومتر في الرمل.", "desc": "Drive anywhere in the 20 km of Ramlat Al Wahiba. Credits for every kilometre off-road.", "creditsPerKm": 40 },
+    { "id": "ta_west", "type": "timeAttack", "title": "Time attack: west dune", "title_ar": "تحدي الوقت: الطعس الغربي", "desc_ar": "اطلع 22 م لين راس الطعس غرب الممر.", "desc": "Climb 22 m to the crest west of the corridor.",
       "start": { "x": 1572, "z": -2338, "heading": 264 }, "gates": [{ "x": 1330, "z": -2300, "r": 18 }], "timeLimit": 90, "goldTime": 30, "reward": 600 },
-    { "id": "ta_east", "type": "timeAttack", "title": "Time attack: big east face", "desc": "38 m of climb in 215 m. Air down and use 4H.",
+    { "id": "ta_east", "type": "timeAttack", "title": "Time attack: big east face", "title_ar": "تحدي الوقت: الطعس الشرقي الكبير", "desc_ar": "38 م طلوع في 215 م. نزّل الهوا وحط 4H.", "desc": "38 m of climb in 215 m. Air down and use 4H.",
       "start": { "x": 1921, "z": -2282, "heading": 104 }, "gates": [{ "x": 2130, "z": -2232, "r": 18 }], "timeLimit": 120, "goldTime": 35, "reward": 900 },
-    { "id": "rescue", "type": "recovery", "title": "Recovery: stuck tourist", "desc": "A tourist wagon is beached west of the corridor. Drive there, hook up a strap (T) and snatch it out.",
+    { "id": "rescue", "type": "recovery", "title": "Recovery: stuck tourist", "title_ar": "سحب: سايح مغرّز", "desc_ar": "سيارة سايح مغرّزة غرب الممر. روح لها، اربط حبل السحب (T) وشدّها برّا.", "desc": "A tourist wagon is beached west of the corridor. Drive there, hook up a strap (T) and snatch it out.",
       "start": { "x": 1650, "z": -2350, "heading": 270 }, "stranded": { "vehicle": "patrol", "x": 1452, "z": -2322, "heading": 280, "livery": "red", "dug": 0.3 },
       "pullDistance": 10, "timeLimit": 420, "reward": 1200 },
-    { "id": "convoy", "type": "checkpoints", "title": "Convoy route to the camp", "desc": "Lead the convoy over the western dunes to the camp. Stay on the route: four checkpoints.",
+    { "id": "convoy", "type": "checkpoints", "title": "Convoy route to the camp", "title_ar": "قافلة إلى المخيم", "desc_ar": "قود القافلة فوق الطعوس الغربية لين المخيم. خلك على الطريق: أربع نقاط تفتيش.", "desc": "Lead the convoy over the western dunes to the camp. Stay on the route: four checkpoints.",
       "start": { "x": 1650, "z": -2350, "heading": 300 },
       "gates": [{ "x": 1446, "z": -2197, "r": 25 }, { "x": 1250, "z": -2050, "r": 25 }, { "x": 1190, "z": -2170, "r": 25 }, { "x": 1418, "z": -2259, "r": 25 }],
       "timeLimit": 420, "reward": 800 }

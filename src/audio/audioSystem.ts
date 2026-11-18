@@ -10,7 +10,7 @@ import { P } from '../core/params';
 import { tun, tunButton } from '../core/tunables';
 import workletUrl from './engineWorklet.ts?worker&url';
 
-type EngineKind = 'I6' | 'V8';
+type EngineKind = 'I6' | 'V6' | 'V8';
 const ENG = cfg.engines as Record<EngineKind, any>;
 
 export interface Layers {

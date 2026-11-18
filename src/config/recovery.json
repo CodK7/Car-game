@@ -1,9 +1,9 @@
 {
   "_note": "Recovery gear. Stiffness comes from minimum breaking strength (MBS) and elongation at MBS: EA = MBS / elongation, k = EA / length. Values are typical catalogue figures (ASSUMPTION, see DECISIONS W6.2).",
   "ropes": {
-    "strap": { "label": "Kinetic snatch strap 9 m", "length": 9, "mbsN": 78000, "elongAtMbs": 0.2, "dampingRatio": 0.12 },
-    "tow": { "label": "Static tow rope 6 m", "length": 6, "mbsN": 60000, "elongAtMbs": 0.08, "dampingRatio": 0.35 },
-    "winch": { "label": "Synthetic winch line 28 m", "length": 28, "mbsN": 95000, "elongAtMbs": 0.035, "dampingRatio": 0.4 }
+    "strap": { "label": "Kinetic snatch strap 9 m", "label_ar": "حبل سحب مطاطي 9 م", "length": 9, "mbsN": 78000, "elongAtMbs": 0.2, "dampingRatio": 0.12 },
+    "tow": { "label": "Static tow rope 6 m", "label_ar": "حبل قطر 6 م", "length": 6, "mbsN": 60000, "elongAtMbs": 0.08, "dampingRatio": 0.35 },
+    "winch": { "label": "Synthetic winch line 28 m", "label_ar": "حبل ونش 28 م", "length": 28, "mbsN": 95000, "elongAtMbs": 0.035, "dampingRatio": 0.4 }
   },
   "winch": { "_note": "12,000 lb class electric winch, first layer (ASSUMPTION)", "lineSpeedNoLoad": 0.15, "stallPullN": 53000, "payoutSpeed": 0.6 },
   "anchor": { "_note": "buried spare wheel / sand anchor: holds until this pull, then drags", "holdN": 70000, "dragN": 45000 },

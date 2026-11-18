@@ -5,6 +5,7 @@
 //   [ / ] tyre pressure -/+ 2 psi, C camera, R reset to road/upright
 import type { Input, Controls } from '../core/input';
 import type { VehicleSim } from '../vehicle/vehicleSim';
+import { t } from '../core/i18n';
 
 export class DriveController {
   private c: Controls = { throttle: 0, brake: 0, steer: 0, handbrake: 0, clutch: 0 };
@@ -44,17 +45,17 @@ export class DriveController {
       if (input.padHit(5)) v.gear = Math.min(v.spec.gearbox.ratios.length, v.gear + 1); // RB
       if (input.padHit(2)) v.gear = Math.max(-1, v.gear - 1); // X
     }
-    if (input.hit('KeyM')) this.say((v.autoGearbox = !v.autoGearbox) ? 'Automatic gearbox' : 'Manual gearbox (E/Q to shift, Shift = clutch)');
+    if (input.hit('KeyM')) this.say((v.autoGearbox = !v.autoGearbox) ? t('ctl.auto') : t('ctl.manual'));
     if (input.hit('Digit1')) this.setMode(v, '2H');
     if (input.hit('Digit2')) this.setMode(v, '4H');
     if (input.hit('Digit3') || input.padHit(3)) this.setMode(v, v.mode === '4L' ? '4H' : '4L');
     if (input.hit('KeyL')) {
       v.rearLock = !v.rearLock && v.spec.driveline.rearLocker;
-      this.say(v.spec.driveline.rearLocker ? `Rear locker ${v.rearLock ? 'ON' : 'off'}` : 'No rear locker fitted');
+      this.say(v.spec.driveline.rearLocker ? t('ctl.rearLock', t(v.rearLock ? 'ctl.on' : 'ctl.off')) : t('ctl.noRear'));
     }
     if (input.hit('KeyK')) {
       v.frontLock = !v.frontLock && v.spec.driveline.frontLocker;
-      this.say(v.spec.driveline.frontLocker ? `Front locker ${v.frontLock ? 'ON' : 'off'}${v.frontLock && v.mode === '2H' ? ' (needs 4H/4L)' : ''}` : 'No front locker fitted');
+      this.say(v.spec.driveline.frontLocker ? t('ctl.frontLock', t(v.frontLock ? 'ctl.on' : 'ctl.off')) + (v.frontLock && v.mode === '2H' ? t('ctl.needs4') : '') : t('ctl.noFront'));
     }
     if (input.hit('BracketLeft') || input.padHit(14)) this.pressure(v, -2);
     if (input.hit('BracketRight') || input.padHit(15)) this.pressure(v, 2);
@@ -66,18 +67,23 @@ export class DriveController {
   }
 
   private setMode(v: VehicleSim, m: '2H' | '4H' | '4L'): void {
+    const modes = v.spec.driveline.modes ?? ['2H', '4H', '4L'];
+    if (!modes.includes(m)) {
+      this.say(t('ctl.noMode', m));
+      return;
+    }
     if (m === '4L' && Math.abs(v.speed) > 3) {
-      this.say('Stop to shift into 4L');
+      this.say(t('ctl.stop4L'));
       return;
     }
     v.mode = m;
-    this.say(`Drive mode ${m}`);
+    this.say(t('ctl.mode', m));
   }
 
   private pressure(v: VehicleSim, d: number): void {
     const p = v.wheels[0].pressurePsi + d;
     v.setPressure(p);
-    this.say(`Tyres ${v.wheels[0].pressurePsi.toFixed(0)} psi`);
+    this.say(t('ctl.tyres', v.wheels[0].pressurePsi.toFixed(0)));
   }
 
   say(m: string): void {

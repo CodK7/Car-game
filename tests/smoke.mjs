@@ -6,6 +6,8 @@ const runs = [
   ['fly', 'mode=fly&quality=low&debug'],
   ['drive', 'mode=drive&quality=low&debug&nosave'],
   ['drive-medium', 'mode=drive&quality=medium&nosave&veh=lc70'],
+  ['drive-camry', 'mode=drive&quality=low&nosave&veh=camry&lang=ar'],
+  ['drive-lc300', 'mode=drive&quality=high&nosave&veh=lc300&lang=en'],
 ];
 const server = await startServer();
 const browser = await launch({ headless: true, width: 960, height: 540 });

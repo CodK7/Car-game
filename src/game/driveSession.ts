@@ -17,6 +17,7 @@ import rcfg from '../config/recovery.json';
 import { VehicleCamera } from '../vehicle/cameras';
 import { DriveController } from './driveController';
 import { tun } from '../core/tunables';
+import { t } from '../core/i18n';
 
 export const SIM_DT = 1 / 120;
 const ROPE_SEGS = 16;
@@ -92,9 +93,7 @@ export class DriveSession {
     this.ctl.autoDrive = P.auto;
     if (this.hud) this.hud.style.display = 'block';
     if (this.helpEl)
-      this.helpEl.textContent =
-        'Click = sound · W/S drive/brake · A/D steer · Space handbrake · 1/2/3 = 2H/4H/4L · L/K lockers · [ ] tyre psi · C camera · V shake · M auto/manual · R reset\n' +
-        'H winch (J reel, U out) · T recovery car · G dig';
+      this.helpEl.textContent = t('help.drive');
     tun('Vehicle', this.sim, 'mass', 1200, 4000, 10);
     tun('Vehicle', this.sim.spec.tyre, 'mu_sand', 0.3, 1.2, 0.01);
     tun('Vehicle', this.sim.spec.tyre, 'mu_hard', 0.5, 1.4, 0.01);
@@ -214,7 +213,7 @@ export class DriveSession {
     } else if (input.hit('KeyT') && rec.partner && rec.partnerRole === 'stranded') {
       if (rec.rope) rec.release();
       else if (rec.partner.pos.distanceTo(sim.pos) < 16) rec.attachVehicle(sim, rec.partner, 'strap');
-      else rec.say(`Get within 15 m of the stuck car (${rec.partner.pos.distanceTo(sim.pos).toFixed(0)} m)`);
+      else rec.say(t('ds.within', rec.partner.pos.distanceTo(sim.pos).toFixed(0)));
     } else if (input.hit('KeyT')) {
       if (!rec.rope || rec.anchor) {
         const kind = Math.abs(sim.speed) < 0.5 && sim.beached ? 'strap' : 'tow';
@@ -223,14 +222,14 @@ export class DriveSession {
         rec.partnerPaint = undefined;
       } else if (!rec.partnerDrive) {
         rec.partnerDrive = true;
-        rec.say(rec.kind === 'strap' ? 'Recovery car: snatch! (ease off the throttle, steer straight)' : 'Recovery car: towing');
+        rec.say(rec.kind === 'strap' ? t('ds.snatch') : t('ds.towing'));
       } else {
         rec.release();
         rec.dismissPartner();
       }
     }
     if (input.hit('KeyG')) {
-      if (Math.abs(sim.speed) > 0.5) rec.say('Stop first to dig');
+      if (Math.abs(sim.speed) > 0.5) rec.say(t('ds.stopDig'));
       else rec.startDig();
     }
     if (rec.digging) {
@@ -295,13 +294,13 @@ export class DriveSession {
   recover(): void {
     const s = this.sim;
     if (s.beached && s.up.y > 0.5 && !P.debug) {
-      this.ctl.say('Beached: air down ( [ ), rock it, dig (G), winch (H, hold J) or call the recovery car (T)');
+      this.ctl.say(t('ds.beached'));
       return;
     }
     const f = s.fwd;
     const heading = (Math.atan2(f.x, -f.z) * 180) / Math.PI;
     s.reset(s.pos.x, s.pos.z, heading);
-    this.ctl.say('Vehicle reset');
+    this.ctl.say(t('ds.reset'));
   }
 
   private updateHud(dt: number): void {
@@ -315,7 +314,7 @@ export class DriveSession {
     if (s.beached && s.input.throttle > 0.3) this.stuckT += dt;
     else this.stuckT = Math.max(0, this.stuckT - dt * 2);
     if (this.stuckT > 2.5) {
-      this.flash('Stuck! Stop spinning: air down ( [ ), reverse and rock, or use 4L');
+      this.flash(t('ds.stuck'));
       this.stuckT = -6;
     }
     this.hudT += dt;
@@ -326,23 +325,23 @@ export class DriveSession {
     const lock = `${s.rearLock ? 'R' : '-'}${s.frontLock ? 'F' : '-'}`;
     const sink = Math.max(...s.wheels.map((w) => w.sink.depth)) * 100;
     this.hud.innerHTML =
-      `<span class="big">${kmh.toFixed(0)}</span> km/h\n` +
-      `${s.rpm.toFixed(0).padStart(4)} rpm  gear ${g}${s.autoGearbox ? ' A' : ' M'}\n` +
-      `${s.mode}  lockers ${lock}  ${s.wheels[0].pressurePsi.toFixed(0)} psi\n` +
-      `sink ${sink.toFixed(0)} cm${s.beached ? '  BEACHED' : ''}` +
+      `<span class="big">${kmh.toFixed(0)}</span> ${t('hud.kmh')}\n` +
+      `${s.rpm.toFixed(0).padStart(4)} ${t('hud.rpm')}  ${t('hud.gear')} ${g}${s.autoGearbox ? ' A' : ' M'}\n` +
+      `${s.mode}  ${t('hud.lockers')} ${lock}  ${s.wheels[0].pressurePsi.toFixed(0)} psi\n` +
+      `${t('hud.sink')} ${sink.toFixed(0)} ${t('hud.cm')}${s.beached ? '  ' + t('hud.beached') : ''}` +
       this.ropeHud() +
       (this.extraHud ? this.extraHud() : '');
   }
 
   private ropeHud(): string {
     const rec = this.rec, r = rec.rope;
-    if (rec.digging) return `\ndigging ${'█'.repeat(Math.round((rec.digT / rcfg.dig.seconds) * 10)).padEnd(10, '░')}`;
+    if (rec.digging) return `\n${t('hud.digging')} ${'█'.repeat(Math.round((rec.digT / rcfg.dig.seconds) * 10)).padEnd(10, '░')}`;
     if (!r) return '';
     const frac = Math.min(1, r.load);
     const bar = '█'.repeat(Math.round(frac * 10)).padEnd(10, '░');
     const warn = frac > rcfg.hud.warnFrac ? ' <span style="color:#ff6a4a">!</span>' : '';
-    const w = r.winch ? `  ${r.winchCmd > 0 ? 'reel' : r.winchCmd < 0 ? 'out' : 'hold'} ${r.restLength.toFixed(1)} m` : '';
-    return `\n${rec.kind} ${(r.tension / 1000).toFixed(1).padStart(4)} kN ${bar}${warn}${w}`;
+    const w = r.winch ? `  ${t(r.winchCmd > 0 ? 'hud.reel' : r.winchCmd < 0 ? 'hud.out' : 'hud.hold')} ${r.restLength.toFixed(1)} m` : '';
+    return `\n${t('rope.' + rec.kind)} ${(r.tension / 1000).toFixed(1).padStart(4)} kN ${bar}${warn}${w}`;
   }
 
   flash(m: string): void {

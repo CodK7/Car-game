@@ -20,6 +20,23 @@
       "intake": 0.22,
       "gain": 0.55
     },
+    "V6": {
+      "_firing": "60-degree V6 (Toyota GR family), firing order 1-2-3-4-5-6, one cylinder every 120 deg; odd cylinders = bank A, even = bank B (ASSUMPTION: GR numbering). Even firing, smoother and raspier than the V8.",
+      "cylinders": 6,
+      "firingOrder": [1, 2, 3, 4, 5, 6],
+      "bankOf": [0, 1, 0, 1, 0, 1],
+      "bankFormants": [[125, 560, 1500], [138, 610, 1650]],
+      "bankPan": [-0.12, 0.12],
+      "pulseWidthMs": 2.4,
+      "cylVar": 0.05,
+      "jitter": 0.04,
+      "knock": 0.04,
+      "mech": 0.06,
+      "crackle": 0.6,
+      "limiterPops": 0.6,
+      "intake": 0.26,
+      "gain": 0.55
+    },
     "V8": {
       "_firing": "cross-plane V8, firing order 1-8-7-3-6-5-4-2, one cylinder every 90 deg; odd cylinders = bank A, even = bank B (ASSUMPTION: Toyota UR/VD order and numbering). Each bank fires unevenly (the V8 burble).",
       "cylinders": 8,
@@ -41,7 +58,9 @@
   "turbo": { "whineHzMin": 2400, "whineHzMax": 7800, "whineGain": 0.05, "hissGain": 0.04, "flutterHz": 21, "flutterGain": 0.18, "flutterTime": 0.55 },
   "vehicles": {
     "patrol": { "engine": "I6", "flutter": 1.0, "whineLow4L": 0.05 },
-    "lc70": { "engine": "V8", "flutter": 0.3, "whineLow4L": 0.06 }
+    "lc70": { "engine": "V8", "flutter": 0.3, "whineLow4L": 0.06 },
+    "lc300": { "engine": "V6", "flutter": 0.0, "whineLow4L": 0.05 },
+    "camry": { "engine": "V6", "flutter": 0.0, "whineLow4L": 0.0 }
   },
   "surface": {
     "scrubGain": 0.35, "scrubHzLoose": 700, "scrubHzHard": 2200, "scrubPsiRef": 32,
