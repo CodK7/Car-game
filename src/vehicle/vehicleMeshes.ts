@@ -12,6 +12,7 @@ import { PRESETS, type VehicleSpec } from './vehicleSim';
 import { objMaterial } from '../gfx/objMaterial';
 import { mergeGeos } from './vehicleView';
 import type { WheelStyle } from './wheelMesh';
+import { attachModel, type ModelDef } from './modelBody';
 import designs from '../config/bodies.json';
 
 type Pt = [number, number];
@@ -27,10 +28,15 @@ interface Design {
   sideSteps?: boolean;
   snorkel?: boolean;
   wheel: WheelStyle;
+  /** optional imported model (public/local, git-ignored) that replaces this procedural body when present */
+  model?: ModelDef;
 }
 const DESIGNS = designs as unknown as Record<string, Design>;
 const KIND_BY_LABEL: Record<string, string> = {};
 for (const [k, s] of Object.entries(PRESETS)) if (!k.startsWith('_')) KIND_BY_LABEL[s.label] = k;
+
+/** cockpit eye of a loaded imported model, per body kind (body frame) */
+const MODEL_EYE = new Map<string, THREE.Vector3>();
 
 function designFor(spec: VehicleSpec, kind?: string): { kind: string; d: Design } {
   const k = kind && DESIGNS[kind] ? kind : KIND_BY_LABEL[spec.label] && DESIGNS[KIND_BY_LABEL[spec.label]] ? KIND_BY_LABEL[spec.label] : 'patrol';
@@ -337,7 +343,7 @@ export interface BodyLayout {
 }
 
 export function bodyLayout(s: VehicleSpec, kind?: string): BodyLayout {
-  const { d } = designFor(s, kind);
+  const { kind: k, d } = designFor(s, kind);
   const S = new BodyShape(s, d);
   const c = d.cabin;
   const roofV = S.cabTop((c.screenTop + c.roofEnd) / 2);
@@ -356,7 +362,7 @@ export function bodyLayout(s: VehicleSpec, kind?: string): BodyLayout {
     zCowl: S.zF + c.u0,
     zScreenTop: S.zF + c.screenTop,
     // left-hand drive (Oman drives on the right)
-    eyeCockpit: new THREE.Vector3(-0.37, S.ground + eyeV, S.zF + uEye),
+    eyeCockpit: MODEL_EYE.get(k)?.clone() ?? new THREE.Vector3(-0.37, S.ground + eyeV, S.zF + uEye),
     eyeBonnet: new THREE.Vector3(0, S.ground + S.topAt(0.9, 0) + 0.2, S.zF + 0.9),
   };
 }
@@ -644,6 +650,7 @@ export function buildBody(spec: VehicleSpec, kindIn: string, paintHex?: string):
   emit(inner, { noShadow: true });
   g.userData.wheelStyle = { ...d.wheel, tread: kind === 'camry' ? 'hw' : 'at' } as WheelStyle;
   g.userData.kind = kind;
+  if (d.model) attachModel(g, spec, d.model, paint, (eye) => (eye ? MODEL_EYE.set(kind, eye) : MODEL_EYE.delete(kind)));
   return g;
 }
 

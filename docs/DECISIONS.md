@@ -153,6 +153,22 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - **U1.8 Start screen is skipped for automation** (`navigator.webdriver` or `?play`) so smoke and measure scripts are unchanged. The browser default language is Arabic and Node defaults to English, so tests run in English.
 - **U1.9 Digits**: Arabic strings use Western digits (0-9). Arabic-Indic digits mixed with Latin model codes (V6, GXR) rendered out of order in RTL.
 
+## U2 — local Patrol VTC model (2026-11-18)
+
+- **U2.1 Local-only exception to "original or CC0".** The user supplied a third-party BeamNG mod and chose "local only". The GLB and the mod never enter git (`public/local/*` ignored, README kept). Only the converter code (ours) is committed. Shots of it go to `tests/tmp`, not `docs/evidence`.
+- **U2.2 Emblems/lettering dropped** by part name; the `NISSAN_LOG` material is dropped. The grille badge that is modelled into the grille itself stays (local copy only).
+- **U2.3 DTS v26 notes**:
+  - Details are 13 ints.
+  - Quaternions are Quat16 (x, y, z, w)/32767 in the standard (non-conjugated) convention, checked on the tilted steering-wheel node.
+  - Prim flags: 0x40000000 strip, 0x80000000 fan, 0x10000000 no material.
+  - Skins use the second UV set.
+- **U2.4 Axes**: game = (−bx, bz − oz, by − oy), with the origin at the hub midpoint (fw1l/rw1l). The mirror needs reversed winding (U2 bug).
+- **U2.5 Skin bake** = lerp(baseColorMap, R·p1 + G·p2 + B·p3 (normalised), clamp(R+G+B)), BeamNG's palette rule as understood. ASSUMPTION: exact BeamNG blend.
+- **U2.6 Decimation**:
+  - Paint 0.55, chrome/black 0.4, interior 0.22, gauges 1.0; meshoptimizer error 1 %.
+  - The model adds ~256 k triangles. Low stays at 64 FPS on the UHD 630, so there is no LOD yet.
+- **U2.7 Procedural wheels kept** under the model: they carry the sim's spin, steer and suspension travel.
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).

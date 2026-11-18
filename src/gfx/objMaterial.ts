@@ -18,6 +18,8 @@ export interface ObjMatOpts {
   receiveShadow?: boolean;
   /** Instanced only: shrink instances to nothing between fade[0] and fade[1] metres from the camera. */
   fade?: [number, number];
+  /** Albedo texture on uv (multiplied with color); used by imported body models. */
+  map?: THREE.Texture | null;
 }
 
 const VERT = /* glsl */ `
@@ -28,7 +30,13 @@ uniform vec2 uFade; // instance distance fade start/end (m); y = 0 disables
 varying vec3 vWorld;
 varying vec3 vN;
 varying vec3 vCol;
+#ifdef USE_ALBEDO_MAP
+varying vec2 vUv;
+#endif
 void main() {
+  #ifdef USE_ALBEDO_MAP
+    vUv = uv;
+  #endif
   vec4 lp = vec4(position, 1.0);
   vec3 n = normal;
   #ifdef USE_INSTANCING
@@ -68,10 +76,17 @@ uniform float uRecv;
 varying vec3 vWorld;
 varying vec3 vN;
 varying vec3 vCol;
+#ifdef USE_ALBEDO_MAP
+uniform sampler2D uMap;
+varying vec2 vUv;
+#endif
 void main() {
   vec3 N = normalize(vN);
   if (!gl_FrontFacing) N = -N;
   vec3 albedo = uColor * vCol;
+  #ifdef USE_ALBEDO_MAP
+    albedo *= texture2D(uMap, vUv).rgb;
+  #endif
   float NL = max(dot(N, uSunDir), 0.0);
   float sh = terrainShadow(vWorld);
   if (uRecv > 0.5) sh *= objShadow(vWorld + N * 0.05);
@@ -103,7 +118,9 @@ export function objMaterial(o: ObjMatOpts = {}): THREE.ShaderMaterial {
       uOpacity: { value: o.opacity ?? 1 },
       uRecv: { value: o.receiveShadow ? 1 : 0 },
       uFade: { value: new THREE.Vector2(o.fade?.[0] ?? 0, o.fade?.[1] ?? 0) },
+      uMap: { value: o.map ?? null },
     },
+    defines: o.map ? { USE_ALBEDO_MAP: '' } : {},
     vertexShader: VERT,
     fragmentShader: FRAG,
     vertexColors: o.vertexColors ?? false,

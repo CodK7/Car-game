@@ -43,6 +43,7 @@
   "patrol": {
     "style": "suv",
     "paint": "#d8d4ca",
+    "model": { "url": "local/patrol_vtc.glb", "yOffset": 0.0, "pitchDeg": 0.0, "fitWheelbase": true, "eye": [-0.43, 1.0, 0.25] },
     "widthCore": 0.95,
     "lower": {
       "top": [[0, 0.96], [0.04, 1.055], [0.1, 1.08], [1.3, 1.12], [1.4, 1.13], [2.3, 1.16], [5.0, 1.17], [5.05, 1.13]],

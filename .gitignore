@@ -13,3 +13,7 @@ __pycache__/
 Data/GIS/raw/
 Data/GIS/work/
 tests/tmp/
+
+# Local-only imported models (not original/CC0, never committed): see public/local/README.md
+public/local/*
+!public/local/README.md

@@ -15,6 +15,34 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | W5 — graphics | DONE (High < 30 FPS here) | tests green (53), `docs/evidence/w5_*.png`, `tests/measure_flicker.mjs` |
 | W6 — gameplay | DONE | tests green (77), full loop in Edge (`tests/measure_loop.mjs`), MP `tests/measure_net.mjs`, `docs/evidence/w6_*.png` |
 | U1 — language + cars | DONE | 86 tests, smoke 5/5, `docs/evidence/cars_*.png`, Low FPS 72–74 |
+| U2 — local Patrol VTC model | DONE (local only) | 89 tests, smoke with and without the GLB, Low FPS 64 with the model |
+
+## U2 — user's own Patrol VTC model, local only (DONE, 2026-11-18)
+
+User request: add the car in `nissan_ftk.zip` (a BeamNG mod, "Patrol Y61" by kn0z). It is not CC0, so the user chose **local only**: the converted model lives in `public/local/` (git-ignored, never committed or published), and a clean checkout uses the procedural body.
+
+- **Converter** `Tools/Models/` (Python via uv + Node): `dts.py` reads the Torque3D DTS v26 `*.cached.dts` (all three memory sections, node transforms, strips/fans, material list), `jbeam.py` resolves the parts tree from the `.pc` config, `mats.py` reads the material JSON, `simplify.mjs` decimates each material group with meshoptimizer, and `convert.py` writes a GLB in the game's body frame.
+  - It bakes the config's paint design (skin + colour palette, paints 1/2/3) into one 2048² JPEG on UV1.
+  - It drops engine-bay parts, emblems, lettering and stickers.
+  - Result: 609 k → 256 k triangles, 10.7 MB.
+- **Game side**: `src/vehicle/modelBody.ts` (new). `bodies.json` gives `patrol.model` = `{url, yOffset, pitchDeg, fitWheelbase, eye}`.
+  - The model is placed so its axle line lands on the sim's rest wheel centres, scaled along z to the preset wheelbase.
+  - The procedural children are hidden; the procedural wheels stay (they spin and steer).
+  - Missing file → the procedural body, silently.
+  - `objMaterial` gained an optional albedo `map` (on `uv`).
+  - Cockpit eye comes from the model.
+- **Bug found on the way**: the BeamNG→game x mirror flipped the triangle winding, so the double-sided shader flipped the normals inward (grey, dented-looking paint). The converter now reverses the index order.
+
+**Evidence:** screenshots kept out of the repo (`tests/tmp/vtc_*.png`, third-party look).
+- Low preset, real Edge window, UHD 630, with the model: 64.3 FPS (1 % low 37), 0 errors.
+- `npm run smoke` passes with and without `public/local/patrol_vtc.glb`.
+- `tests/modelBody.test.ts`: placement maths, Node fallback, URLs under `local/`.
+
+**Open issues (U2):**
+- The grille badge is part of the grille mesh in the mod (separate emblem meshes are removed). Fine for the user's local copy only.
+- Parts the mod borrows from BeamNG base content (some door cards, sun visors, grille insert variants) are not in the DTS and are missing.
+- Paint gloss is generic (the mod's PBR and clear coat are not ported); the body reads slightly bright at noon.
+- High preset still < 30 FPS (as before).
 
 ## U1 — Arabic/English, high-detail bodies, three new cars (DONE, 2026-11-18)
 
