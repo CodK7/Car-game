@@ -34,13 +34,14 @@ describe('FrameLimiter', () => {
 describe('settings', () => {
   it('sanitize clamps bad values and keeps good ones', () => {
     const base = defaultSettings(false);
-    const s = sanitize({ quality: 'ultra' as any, fpsCap: 5, scale: 9, showFps: 'yes' as any, touch: 'on' }, base);
+    const s = sanitize({ quality: 'insane' as any, fpsCap: 5, scale: 9, showFps: 'yes' as any, touch: 'on' }, base);
     expect(s.quality).toBe(base.quality);
     expect(s.fpsCap).toBe(15);
-    expect(s.scale).toBe(1.5);
+    expect(s.scale).toBe(2);
     expect(s.showFps).toBe(base.showFps);
     expect(s.touch).toBe('on');
     expect(sanitize({ fpsCap: -1, scale: 0 }, base)).toMatchObject({ fpsCap: 0, scale: 0 });
+    expect(sanitize({ quality: 'legendary' }, base).quality).toBe('legendary');
   });
   it('mobile defaults are lighter than desktop', () => {
     const m = defaultSettings(true), d = defaultSettings(false);

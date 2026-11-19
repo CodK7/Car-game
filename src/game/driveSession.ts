@@ -18,6 +18,7 @@ import { VehicleCamera } from '../vehicle/cameras';
 import { DriveController } from './driveController';
 import { tun } from '../core/tunables';
 import { t } from '../core/i18n';
+import driftCfg from '../config/drift.json';
 
 export const SIM_DT = 1 / 120;
 const ROPE_SEGS = 16;
@@ -75,6 +76,11 @@ export class DriveSession {
     this.sim = new VehicleSim(spec ?? getSpec(vehicleName), this.ground);
     this.sim.deform = this.grid;
     this.sim.reset(spawn.x, spawn.z, spawn.heading);
+    const st = this.sim.spec.driveline.start;
+    if (st?.mode) this.sim.mode = st.mode;
+    if (st?.rearLock) this.sim.rearLock = this.sim.spec.driveline.rearLocker;
+    // the drift setup starts in 4H (2H digs in at the soft dune spawn): tell the player where the drift mode is
+    if (st?.mode === '4H' && st.rearLock) this.ctl.say(t('ctl.driftHint'));
     this.bodyFactory = bodyFactory;
     this.view = new VehicleView(this.sim, bodyFactory ? bodyFactory(this.sim, vehicleName, paint) : null);
     this.spray = new SandSpray(2500);
@@ -175,6 +181,7 @@ export class DriveSession {
     this.view.update();
     this.updateRecoveryVisuals();
     this.cam.update(dt, sim, input, (x, z) => this.ground.heightAt(x, z));
+    this.updateDrift(dt);
     this.updateHud(dt);
   }
 
@@ -187,6 +194,7 @@ export class DriveSession {
     sim.reset(old.pos.x, old.pos.z, (Math.atan2(f.x, -f.z) * 180) / Math.PI);
     sim.setPressure(old.wheels[0].pressurePsi);
     sim.mode = old.mode;
+    sim.rearLock = old.rearLock && spec.driveline.rearLocker;
     sim.autoGearbox = old.autoGearbox;
     this.sim = sim;
     this.kind = kind;
@@ -329,8 +337,40 @@ export class DriveSession {
       `${s.rpm.toFixed(0).padStart(4)} ${t('hud.rpm')}  ${t('hud.gear')} ${g}${s.autoGearbox ? ' A' : ' M'}\n` +
       `${s.mode}  ${t('hud.lockers')} ${lock}  ${s.wheels[0].pressurePsi.toFixed(0)} psi\n` +
       `${t('hud.sink')} ${sink.toFixed(0)} ${t('hud.cm')}${s.beached ? '  ' + t('hud.beached') : ''}` +
+      this.driftHud() +
       this.ropeHud() +
       (this.extraHud ? this.extraHud() : '');
+  }
+
+  /** drift angle + combo score (src/config/drift.json → hud) */
+  private driftHud(): string {
+    const d = this.drift;
+    if (d.angle > 0) return `\n<b style="color:var(--sand)">${t('hud.drift', d.angle.toFixed(0), d.mult)}</b>  ${Math.round(d.combo)}`;
+    return d.last > 0 ? '\n' + t('hud.driftBest', Math.round(d.last), Math.round(d.best)) : '';
+  }
+
+  /** drift scoring state, updated every frame */
+  drift = { angle: 0, combo: 0, mult: 1, idle: 0, last: 0, best: 0 };
+  private updateDrift(dt: number): void {
+    const s = this.sim, H = driftCfg.hud, d = this.drift;
+    const vLong = s.vel.dot(s.fwd), vLat = s.vel.dot(s.right);
+    const sp = Math.hypot(vLong, vLat);
+    const ang = (Math.abs(Math.atan2(vLat, Math.abs(vLong))) * 180) / Math.PI;
+    const onGround = s.wheels.some((w) => w.contact);
+    if (onGround && vLong > 0 && sp > H.minSpeed && ang > H.minAngleDeg && ang < 110) {
+      d.angle = ang;
+      d.idle = 0;
+      d.combo += ang * sp * H.pointsPerDegMps * d.mult * dt;
+      d.mult = Math.min(H.maxMult, 1 + Math.floor(d.combo / H.multStepPoints));
+    } else {
+      d.angle = 0;
+      if (d.combo > 0 && (d.idle += dt) > H.comboTimeout) {
+        d.last = d.combo;
+        d.best = Math.max(d.best, d.combo);
+        d.combo = 0;
+        d.mult = 1;
+      }
+    }
   }
 
   private ropeHud(): string {

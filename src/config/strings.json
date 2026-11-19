@@ -45,6 +45,7 @@
     "ctl.noFront": "No front locker fitted",
     "ctl.stop4L": "Stop to shift into 4L",
     "ctl.mode": "Drive mode {0}",
+    "ctl.driftHint": "4H + rear locker. Drift on hard ground: press 1 (2H), A/D + Space, then throttle",
     "ctl.noMode": "{0} is not available on this car",
     "ctl.tyres": "Tyres {0} psi",
     "ds.within": "Get within 15 m of the stuck car ({0} m)",
@@ -137,7 +138,14 @@
     "touch.dig": "Dig out",
     "touch.handbrake": "Handbrake",
     "touch.brake": "Brake / reverse",
-    "touch.gas": "Gas"
+    "touch.gas": "Gas",
+    "set.q.ultra": "Ultra",
+    "set.q.legendary": "Legendary",
+    "set.heavy": "Ultra / Legendary are for powerful graphics cards only: very high resolution (supersampling), huge view distance, 4K shadows. Expect low FPS on laptops and phones.",
+    "set.drift": "Drift assist",
+    "set.driftNote": "Automatic counter-steer while the car slides. Off = full manual drifting.",
+    "hud.drift": "DRIFT {0}°  ×{1}",
+    "hud.driftBest": "drift {0} pts (best {1})"
   },
   "ar": {
     "start.title": "تطعيس رمال الشرقية",
@@ -183,7 +191,8 @@
     "ctl.needs4": " (يحتاج 4H أو 4L)",
     "ctl.noFront": "ما فيها قفل دفرنس أمامي",
     "ctl.stop4L": "وقّف السيارة عشان تحط 4L",
-    "ctl.mode": "وضع الدفع {0}",
+    "ctl.mode": "وضع الدفع ⁦{0}⁩",
+    "ctl.driftHint": "⁦4H⁩ + قفل خلفي. للدرفت على الأرض القوية: اضغط 1 (⁦2H⁩)، ⁦A/D + Space⁩، بعدين بنزين",
     "ctl.noMode": "{0} مو متوفر في هالسيارة",
     "ctl.tyres": "هوا التواير {0} psi",
     "ds.within": "قرّب من السيارة المغرّزة لين 15 م (باقي {0} م)",
@@ -276,6 +285,13 @@
     "touch.dig": "حفر",
     "touch.handbrake": "هاندبريك",
     "touch.brake": "فرامل / ريوس",
-    "touch.gas": "بنزين"
+    "touch.gas": "بنزين",
+    "set.q.ultra": "ألترا",
+    "set.q.legendary": "أسطوري",
+    "set.heavy": "ألترا / أسطوري للكروت القوية بس: دقة عالية جداً (supersampling)، مدى رؤية بعيد، ظلال 4K. الـ FPS بيكون قليل على اللابتوبات والتلفونات.",
+    "set.drift": "مساعد الدرفت",
+    "set.driftNote": "يعكس الستيرنق تلقائياً لما السيارة تنزلق. إيقاف = درفت يدوي كامل.",
+    "hud.drift": "درفت {0}°  ×{1}",
+    "hud.driftBest": "درفت {0} نقطة (الأفضل {1})"
   }
 }

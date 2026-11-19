@@ -1,0 +1,5 @@
+{
+  "_doc": "Drift / hajwala layer (src/game/driveController.ts, src/game/driveSession.ts). assist = automatic counter-steer toward the direction of travel while the body slides: (slip - deadband + rateGain[s] * slip rate) / steering lock, faded by fadeWithInput * |player steer|; past maxAngleDeg the throttle is cut linearly over throttleFadeDeg down to minThrottle (settings: Drift assist). hud = drift angle + combo score. Angles in degrees, speeds in m/s.",
+  "assist": { "gain": 1.0, "deadbandDeg": 2, "minSpeed": 2.5, "fadeWithInput": 0.3, "rateGain": 0.2, "maxAngleDeg": 35, "throttleFadeDeg": 15, "minThrottle": 0.25 },
+  "hud": { "minAngleDeg": 12, "minSpeed": 6, "comboTimeout": 1.6, "pointsPerDegMps": 0.05, "multStepPoints": 400, "maxMult": 5 }
+}

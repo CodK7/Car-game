@@ -17,6 +17,7 @@ import { TerrainShadowBaker } from './world/shadowBake';
 import worldCfg from './config/world.json';
 import { DriveSession } from './game/driveSession';
 import { buildBody } from './vehicle/vehicleMeshes';
+import { PRESETS } from './vehicle/vehicleSim';
 import { Game } from './game/game';
 import { NetClient } from './game/net';
 import { AudioSystem } from './audio/audioSystem';
@@ -109,7 +110,7 @@ export class App {
     this.fly.yaw = (-(P.heading ?? sp.heading_deg) * Math.PI) / 180;
     if (P.mode !== 'fly' && !P.bench) {
       status('vehicle');
-      const veh = P.veh || 'patrol';
+      const veh = PRESETS[P.veh] ? P.veh : 'patrol';
       this.vehName = veh;
       this.drive = new DriveSession(this.assets.data, this.terrain, this.camera, q, veh, { x: sx, z: sz, heading: P.heading ?? sp.heading_deg }, (sim, kind, paint) => (P.box ? null : buildBody(sim.spec, kind, paint)));
       this.scene.add(this.drive.group);
@@ -141,13 +142,13 @@ export class App {
     tun('Time of day', this.tod, 'windDirDeg', 0, 360, 1);
     tun('Time of day', this.tod, 'exposureBias', 0.3, 2.5, 0.01);
     tun('Time of day', this.tod, 'hazeScale', 0, 6, 0.05);
-    tun('Quality', this.quality, 'name', ['low', 'medium', 'high'], undefined, undefined, (v) => {
+    tun('Quality', this.quality, 'name', ['low', 'medium', 'high', 'ultra', 'legendary'], undefined, undefined, (v) => {
       this.quality.auto = false;
       this.quality.name = '' as any;
       this.quality.set(v);
     }, 'preset');
     tun('Quality', this.quality, 'auto');
-    tun('Quality', this.quality.q, 'renderScale', 0.3, 1.5, 0.05, () => this.resize());
+    tun('Quality', this.quality.q, 'renderScale', 0.3, 2, 0.05, () => this.resize());
     tun('Terrain', this.terrain, 'detail', 0.8, 4, 0.05);
     tun('Terrain', this.shadowBaker, 'softnessDeg', 0.3, 5, 0.1, () => (this.shadowBaker.lastVersion = -1), 'shadow softness');
     if (P.debug) this.statsEl.style.display = 'block';
@@ -159,7 +160,11 @@ export class App {
   }
 
   applyQuality(q: Quality): void {
-    this.shadows.configure({ size: P.noshadow ? 0 : q.shadowMap, splits: q.shadowSplits });
+    // the cascade atlas is shadowMap × cascades wide: shrink it to what this GPU can allocate (Legendary on weak GPUs)
+    const maxTex = this.renderer.capabilities.maxTextureSize;
+    let size = q.shadowMap;
+    while (size > 256 && size * Math.max(q.shadowSplits.length - 1, 1) > maxTex) size /= 2;
+    this.shadows.configure({ size: P.noshadow ? 0 : size, splits: q.shadowSplits });
     this.terrain.setQuality(q);
     this.props?.setQuality(q);
     this.drive?.setQuality(q);
@@ -169,7 +174,8 @@ export class App {
   resize(): void {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr()) * this.quality.q.renderScale;
+    // Ultra/Legendary lift the DPR cap (sharp on retina/4K screens) on top of their supersampling renderScale
+    const dpr = Math.min(window.devicePixelRatio || 1, this.quality.q.maxDpr || maxDpr()) * this.quality.q.renderScale;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / Math.max(h, 1);
@@ -181,6 +187,7 @@ export class App {
     this.settings = s;
     writeSettings(s);
     this.limiter.cap = s.fpsCap;
+    if (this.drive) this.drive.ctl.driftAssist = s.driftAssist;
     if (!P.raw.has('quality')) this.quality.setMode(s.quality);
     this.quality.setScale(s.scale);
     if (this.fpsEl) this.fpsEl.style.display = s.showFps ? 'block' : 'none';
@@ -196,6 +203,7 @@ export class App {
 
   start(): void {
     this.limiter.cap = this.settings.fpsCap;
+    if (this.drive) this.drive.ctl.driftAssist = this.settings.driftAssist;
     if (this.fpsEl) this.fpsEl.style.display = this.settings.showFps ? 'block' : 'none';
     this.last = performance.now();
     let lastRaf = performance.now();

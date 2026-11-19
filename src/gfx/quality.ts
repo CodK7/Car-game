@@ -3,8 +3,10 @@ import presets from '../config/quality.json';
 import { P, QualityName } from '../core/params';
 
 export type Quality = typeof presets.low;
-export type PresetName = 'low' | 'medium' | 'high';
+export type PresetName = 'low' | 'medium' | 'high' | 'ultra' | 'legendary';
+/** presets Auto may step through; Ultra and Legendary are manual only (powerful GPUs) */
 const ORDER: PresetName[] = ['low', 'medium', 'high'];
+export const PRESET_NAMES: PresetName[] = ['low', 'medium', 'high', 'ultra', 'legendary'];
 
 export class QualityManager {
   name: PresetName;
@@ -51,6 +53,7 @@ export class QualityManager {
     this.acc = 0;
     this.frames = 0;
     if (m !== 'auto') this.set(m);
+    else if (!ORDER.includes(this.name)) this.set('high'); // Auto never runs Ultra/Legendary
   }
 
   /** Feed frame times; in Auto mode steps the preset down/up with hysteresis. */

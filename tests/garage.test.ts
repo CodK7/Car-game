@@ -55,8 +55,6 @@ describe('garage parts', () => {
     const s = buildSpec('patrol', { engine: 'turbo' });
     expect(s.engine.turbo).not.toBeNull();
     expect(peakPowerKW(s) / peakPowerKW(getSpec('patrol'))).toBeGreaterThan(1.2);
-    // LC70 already has a turbo: kept as is
-    expect(buildSpec('lc70', { engine: 'turbo' }).engine.turbo).toEqual(getSpec('lc70').engine.turbo);
   });
 
   const climb = (spec: VehicleSpec, deg: number, psi: number, seconds: number, mode: '2H' | '4H' = '4H') => {

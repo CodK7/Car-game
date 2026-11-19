@@ -185,6 +185,17 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - No new "phone" quality preset yet: we wait for a real-device measurement before adding one.
 - `npm run dev` still listens on 127.0.0.1 only. `npm run dev:lan` opens the dev server to the local network for phone testing.
 
+## U5 — Patrol only, drift setup, Ultra / Legendary (2026-11-19)
+
+- **U5.1 Only the Patrol VTC remains** (user request). `VEHICLES` is built from `vehicles.json`, so a removed key in an old save or URL falls back to the first car instead of crashing.
+- **U5.2 Drift setup = the common game-tuning recipe** (CarX / Forza / GTPlanet guides): locked rear diff, large steering angle, rear roll stiffness above the front so the rear lets go first, less rear grip than front, strong handbrake. Values were chosen by a scripted sweep (PROGRESS U5), not by real Y61 drift-build data, which we did not find. ASSUMPTION: steer 48° / speedReduce 0.2, anti-roll F 18000 / R 32000, rear spring 58000, rearGrip 0.95, handbrake 6500 N·m.
+- **U5.3 Start in 4H + rear locker, not 2H.** 2H from standstill at the soft dune spawn dug in to 60 cm in the browser; 4H reached 45 km/h. The start hint tells the player to press 1 (2H) for drifting on hard ground.
+- **U5.4 Drift assist on by default**, with an Off switch. Keyboard players cannot feather a binary W key or counter-steer fast enough. Without assist, every scripted handbrake entry spun with both setups. The assist adds counter-steer (slip angle + 0.2 s × slip rate, scaled by the steering lock) and cuts throttle linearly from 35° to 50° slip (min 25 %).
+- **U5.5 Rear tyre grip is a separate multiplier (`tyre.rearGrip`)** applied to the rear friction coefficient, so the sand and tyre model stay unchanged.
+- **U5.6 Ultra / Legendary are manual-only.** Auto stays on Low ↔ Medium ↔ High, because Auto must never pick a preset that drops this machine below 30 FPS. Legendary supersamples (render scale 1.5 × DPR up to 3).
+- **U5.7 Shadow map size is clamped** so cascades × size fit `MAX_TEXTURE_SIZE` (it halves down to 256). Legendary 4096 × 3 cascades would exceed 8192-limit GPUs.
+- **U5.8 Cross-axle test pit 1.2 m → 0.4 m.** It was sized for the leaf-sprung LC70. The taller Patrol with a stiff rear bar rolls into a 1.2 m hole, so the test now checks the locker, not a rollover.
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).

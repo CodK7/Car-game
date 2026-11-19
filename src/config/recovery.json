@@ -8,6 +8,6 @@
   "winch": { "_note": "12,000 lb class electric winch, first layer (ASSUMPTION)", "lineSpeedNoLoad": 0.15, "stallPullN": 53000, "payoutSpeed": 0.6 },
   "anchor": { "_note": "buried spare wheel / sand anchor: holds until this pull, then drags", "holdN": 70000, "dragN": 45000 },
   "dig": { "_note": "shovel: each second of digging removes this much dug-in depth per wheel and lowers the sand under the belly", "seconds": 4, "wheelDigPerSec": 0.06, "bellyLowerPerSec": 0.05, "radius": 0.7 },
-  "partner": { "_note": "AI recovery vehicle for snatch / tow", "vehicle": "lc70", "standOff": 4, "throttle": 0.7, "pullSpeed": 2.5 },
+  "partner": { "_note": "AI recovery vehicle for snatch / tow", "vehicle": "patrol", "standOff": 4, "throttle": 0.7, "pullSpeed": 2.5 },
   "hud": { "warnFrac": 0.7 }
 }

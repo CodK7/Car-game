@@ -57,10 +57,7 @@
   },
   "turbo": { "whineHzMin": 2400, "whineHzMax": 7800, "whineGain": 0.05, "hissGain": 0.04, "flutterHz": 21, "flutterGain": 0.18, "flutterTime": 0.55 },
   "vehicles": {
-    "patrol": { "engine": "I6", "flutter": 1.0, "whineLow4L": 0.05 },
-    "lc70": { "engine": "V8", "flutter": 0.3, "whineLow4L": 0.06 },
-    "lc300": { "engine": "V6", "flutter": 0.0, "whineLow4L": 0.05 },
-    "camry": { "engine": "V6", "flutter": 0.0, "whineLow4L": 0.0 }
+    "patrol": { "engine": "I6", "flutter": 1.0, "whineLow4L": 0.05 }
   },
   "surface": {
     "scrubGain": 0.35, "scrubHzLoose": 700, "scrubHzHard": 2200, "scrubPsiRef": 32,

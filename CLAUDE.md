@@ -11,7 +11,7 @@ A realistic open-world dune-bashing ("تطعيس") game set in Ramlat Al Wahiba 
 ## Platform rules (non-negotiable)
 - Web app only: TypeScript + Vite + Three.js on WebGL2. No Unreal, Epic, Unity, Godot, emulators or native installs. No paid services.
 - Must run with `npm install && npm run dev` and open in the Claude Code Browser pane, any browser, and from VS Code (`.vscode/`).
-- Floor hardware is this machine's integrated GPU (Intel UHD 630): 30+ FPS on the Low preset; presets Low / Medium / High / Auto.
+- Floor hardware is this machine's integrated GPU (Intel UHD 630): 30+ FPS on the Low preset; presets Low / Medium / High / Auto, plus manual-only Ultra / Legendary for strong GPUs.
 - Legal: original or CC0 assets only. Meshes and audio are procedural. No real car logos/models, no copyrighted audio.
   Credits required: Copernicus DEM attribution and "© OpenStreetMap contributors" (both in `public/terrain/manifest.json`).
 

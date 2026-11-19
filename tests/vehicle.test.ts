@@ -8,7 +8,7 @@ import { DeformGrid } from '../src/sand/deformGrid';
 import { SandGround } from '../src/sand/sandGround';
 
 const DT = 1 / 120;
-const metrics: Record<string, Record<string, number | string>> = { patrol: {}, lc70: {} };
+const metrics: Record<string, Record<string, number | string>> = { patrol: {} };
 const rec = (veh: string, k: string, v: number | string) => (metrics[veh][k] = typeof v === 'number' ? +v.toFixed(2) : v);
 
 function sim(veh: string, ground: SimGround, heading = 0): VehicleSim {
@@ -31,7 +31,7 @@ function run(s: VehicleSim, seconds: number, each?: (t: number) => boolean | voi
 }
 const flat = () => new PlaneGround(0, 0, 0);
 
-for (const veh of ['patrol', 'lc70']) {
+for (const veh of ['patrol']) {
   describe(`${veh} metrics`, () => {
     it('0-100 km/h and top speed on flat hard ground (auto, 2H)', () => {
       const s = sim(veh, flat());
@@ -165,14 +165,15 @@ for (const veh of ['patrol', 'lc70']) {
 }
 
 describe('driveline and stability', () => {
-  // ground with a pit under the rear-right wheel (cross-axle situation)
+  // ground with a pit under the rear-right wheel (cross-axle situation). 0.4 m deep: deeper than the rear
+  // droop so the wheel hangs; the old 1.2 m pit (sized for the removed LC70) rolls the taller Patrol over.
   const pit: SimGround = {
-    heightAt: (x, z) => (x > 0.35 && z > 0.6 && z < 5 ? -1.2 : 0),
+    heightAt: (x, z) => (x > 0.35 && z > 0.6 && z < 5 ? -0.4 : 0),
     looseAt: () => 0,
   };
   it('open rear diff spins the unloaded wheel; the rear locker drives out (2H)', () => {
     const go = (lock: boolean) => {
-      const s = sim('lc70', pit);
+      const s = sim('patrol', pit);
       s.mode = '2H';
       s.rearLock = lock;
       run(s, 1.5);
@@ -181,8 +182,8 @@ describe('driveline and stability', () => {
       return { dist: -s.pos.z, spinRR: Math.abs(s.wheels[3].omega) };
     };
     const open = go(false), locked = go(true);
-    metrics.lc70['cross-axle 2H open diff (m)'] = +open.dist.toFixed(2);
-    metrics.lc70['cross-axle 2H rear locker (m)'] = +locked.dist.toFixed(2);
+    metrics.patrol['cross-axle 2H open diff (m)'] = +open.dist.toFixed(2);
+    metrics.patrol['cross-axle 2H rear locker (m)'] = +locked.dist.toFixed(2);
     expect(open.dist).toBeLessThan(0.6);
     expect(locked.dist).toBeGreaterThan(1.5);
   });

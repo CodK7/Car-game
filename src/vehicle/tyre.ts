@@ -13,6 +13,8 @@ export interface TyreSpec {
   shapeHard: number; // Pacejka-like C (higher = sharper drop after peak)
   shapeSand: number;
   sidewall_m: number; // sidewall height (for bulge / deflection)
+  /** rear-axle friction scale (drift balance: < 1 = rear lets go before the front). Optional, default 1. */
+  rearGrip?: number;
 }
 
 export interface TyreState {

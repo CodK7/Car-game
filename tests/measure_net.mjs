@@ -14,7 +14,7 @@ const res = {};
 try {
   const url = `${web.url}?quality=low&mute&nosave&tod=16.4&server=ws://localhost:8788`;
   const one = await openGame(browser, url + '&veh=patrol');
-  const two = await openGame(browser2, url + '&veh=lc70');
+  const two = await openGame(browser2, url + '&veh=patrol');
   const ev = (p, f, ...a) => p.page.evaluate(f, ...a);
   await ev(one, () => { const s = window.__app.drive.sim; s.reset(1600, -2340, 270); });
   await ev(two, () => { const s = window.__app.drive.sim; s.reset(1609, -2340, 90); }); // 9 m east, facing east (rear hooks face each other)

@@ -37,7 +37,9 @@ export interface VehicleSpec {
     thermal?: { ambientC: number; normalC: number; heatPerSecFull: number; coolPerSec: number; derateStartC: number; derateFullC: number; derateMax: number };
   };
   gearbox: { ratios: number[]; reverse: number; final: number; lowRange: number; shiftTime: number; autoUpRpm: number[]; autoDownRpm: number[]; clutchTorque: number; stallRpm: number; converterTR: number };
-  driveline: { efficiency: number; rearLocker: boolean; frontLocker: boolean; fwd?: boolean; modes?: DriveMode[]; /** traction control: throttle cut when driven-wheel slip exceeds `slip` (ratio), `gain` cut per unit excess */ tc?: { slip: number; gain: number; minSpeed: number } };
+  driveline: { efficiency: number; rearLocker: boolean; frontLocker: boolean; fwd?: boolean; modes?: DriveMode[]; /** traction control: throttle cut when driven-wheel slip exceeds `slip` (ratio), `gain` cut per unit excess */ tc?: { slip: number; gain: number; minSpeed: number };
+    /** player car's state when it is spawned (drift setup: 2H with the rear locker in) */
+    start?: { mode?: DriveMode; rearLock?: boolean } };
   brakes: { front: number; rear: number; handbrake: number };
   steer: { maxDeg: number; speedReduce: number };
   aero: { cdA: number; liftA: number };
@@ -562,6 +564,7 @@ export class VehicleSim {
       w.vLong = vp.dot(w.fwd);
       w.vLat = vp.dot(w.right);
       tyreState(this.spec.tyre, w.pressurePsi, w.loose, Math.min(w.load, w.staticLoad * 2.5), w.tyre);
+      if (!w.front && this.spec.tyre.rearGrip) w.tyre.mu *= this.spec.tyre.rearGrip;
       w.deflF += (w.tyre.deflection - w.deflF) * 0.04;
     } else {
       w.right.copy(w.fwd).cross(this.up).normalize();

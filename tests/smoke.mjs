@@ -5,9 +5,11 @@ import { startServer, launch, openGame } from './browser.mjs';
 const runs = [
   ['fly', 'mode=fly&quality=low&debug'],
   ['drive', 'mode=drive&quality=low&debug&nosave'],
-  ['drive-medium', 'mode=drive&quality=medium&nosave&veh=lc70'],
-  ['drive-camry', 'mode=drive&quality=low&nosave&veh=camry&lang=ar'],
-  ['drive-lc300', 'mode=drive&quality=high&nosave&veh=lc300&lang=en'],
+  ['drive-medium', 'mode=drive&quality=medium&nosave&lang=ar'],
+  ['drive-high', 'mode=drive&quality=high&nosave&lang=en'],
+  ['drive-ultra', 'mode=drive&quality=ultra&nosave'],
+  ['drive-legendary', 'mode=drive&quality=legendary&nosave'],
+  ['old-car-param', 'mode=drive&quality=low&nosave&veh=lc70'],
 ];
 const server = await startServer();
 const browser = await launch({ headless: true, width: 960, height: 540 });

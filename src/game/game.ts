@@ -73,6 +73,8 @@ export class Game {
     drive.extraHud = () => this.hud();
     window.addEventListener('beforeunload', () => writeSave(this.save));
     // apply the saved build to the starting vehicle
+    // saves from older versions may name a car that was removed: fall back to the first one
+    if (!PRESETS[this.save.vehicle]) this.save.vehicle = VEHICLES[0];
     this.applyVehicle(P.veh ? drive.kind : this.save.vehicle);
     this.applyHelp();
   }

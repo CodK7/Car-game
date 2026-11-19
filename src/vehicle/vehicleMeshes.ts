@@ -548,10 +548,7 @@ export function buildBody(spec: VehicleSpec, kindIn: string, paintHex?: string):
   }
 
   // ---- style-specific: fascia, lamps, bumpers, rear
-  if (kind === 'camry') camryDetails(S, parts, ex);
-  else if (kind === 'lc300') lc300Details(S, parts, ex);
-  else if (kind === 'patrol') patrolDetails(S, parts, ex);
-  else lc70Details(S, parts, ex);
+  patrolDetails(S, parts, ex);
   if (d.roofRails) {
     const v = S.cabTop(uCabMid);
     for (const side of [-1, 1]) {
@@ -648,7 +645,7 @@ export function buildBody(spec: VehicleSpec, kindIn: string, paintHex?: string):
   emit(parts);
   emit(ex, { noShadow: true });
   emit(inner, { noShadow: true });
-  g.userData.wheelStyle = { ...d.wheel, tread: kind === 'camry' ? 'hw' : 'at' } as WheelStyle;
+  g.userData.wheelStyle = { ...d.wheel, tread: 'at' } as WheelStyle;
   g.userData.kind = kind;
   if (d.model) attachModel(g, spec, d.model, paint, (eye) => (eye ? MODEL_EYE.set(kind, eye) : MODEL_EYE.delete(kind)));
   return g;
@@ -699,83 +696,6 @@ const slats = (S: BodyShape, parts: Parts, key: string, x0: number, x1: number, 
   }
 };
 
-function camryDetails(S: BodyShape, parts: Parts, ex: Parts): void {
-  const L = S.L;
-  // lower grille: wide trapezoid with horizontal mesh bars, chrome-less (sport look)
-  ex.add('black', capQuad(S, false, [[-0.6, 0.27], [0.6, 0.27], [0.5, 0.52], [-0.5, 0.52]], 0.004));
-  for (let i = 0; i < 6; i++) {
-    const v = 0.3 + i * 0.038, w = 1.12 - i * 0.03;
-    ex.add('satin', box(w, 0.01, 0.025, 0, S.ground + v, S.zF - 0.01));
-  }
-  // slim upper grille between the lamps
-  ex.add('black', topRect(S, 0.0, 0.07, -0.42, 0.42, 0.003, 3, 6));
-  // fog-lamp bezels
-  for (const side of [-1, 1]) {
-    ex.add('black', capQuad(S, false, [[side * 0.62, 0.3], [side * 0.7, 0.3], [side * 0.72, 0.5], [side * 0.64, 0.5]], 0.004));
-    ex.add('lens', capRect(S, false, side * 0.64, side * 0.69, 0.33, 0.36, 0.006));
-  }
-  // headlights: slim, swept back over the shoulder; lens + projector + L-shaped DRL
-  for (const side of [-1, 1]) {
-    ex.add('reflector', topRect(S, 0.02, 0.36, side * 0.46, side * (S.xe(0.2) + S.R(0.2) * 0.85), 0.004, 8, 8));
-    ex.add('lens', topRect(S, 0.05, 0.3, side * 0.5, side * 0.62, 0.007, 4, 3));
-    ex.add('drl', topRect(S, 0.03, 0.06, side * 0.5, side * (S.xe(0.05) + S.R(0.05) * 0.7), 0.008, 2, 6));
-    ex.add('drl', topRect(S, 0.06, 0.34, side * (S.xe(0.2) + S.R(0.2) * 0.55), side * (S.xe(0.2) + S.R(0.2) * 0.7), 0.008, 6, 2));
-  }
-  // tail lamps: wrap from the boot lid onto the rear wings, with a dark smoked centre
-  for (const side of [-1, 1]) {
-    ex.add('tail', sideRect(S, side, L - 0.3, L - 0.005, 0.86, 0.97, 0.004, 6, 2));
-    ex.add('tail', capQuad(S, true, [[side * 0.48, 0.8], [side * 0.82, 0.8], [side * 0.86, 0.88], [side * 0.5, 0.88]].map(([x, v]) => [x, v] as Pt), 0.004));
-    ex.add('tailDark', capQuad(S, true, [[side * 0.52, 0.815], [side * 0.7, 0.815], [side * 0.72, 0.865], [side * 0.54, 0.865]], 0.006));
-  }
-  ex.add('chrome', capRect(S, true, -0.45, 0.45, 0.835, 0.845, 0.004));
-  // boot-lid lip spoiler and dual exhaust tips in the rear diffuser
-  parts.add('paint', topRect(S, L - 0.12, L - 0.03, -0.62, 0.62, 0.012, 3, 10));
-  for (const side of [-1, 1]) {
-    ex.add('chrome', cyl(0.045, 0.06, 20).rotateX(Math.PI / 2).scale(1.35, 0.7, 1).translate(side * 0.5, S.ground + 0.29, S.zF + L - 0.035));
-    ex.add('rubber', cyl(0.036, 0.062, 20).rotateX(Math.PI / 2).scale(1.35, 0.7, 1).translate(side * 0.5, S.ground + 0.29, S.zF + L - 0.033));
-  }
-  // shark-fin antenna
-  const ua = S.d.cabin.roofEnd - 0.05;
-  parts.add('black', rbox(0.06, 0.06, 0.17, 0.03, 0, S.ground + S.cabTop(ua) + 0.035, S.zF + ua, 2));
-  // side skirts (black) and chrome window-line already via cabin.belt
-  for (const side of [-1, 1]) ex.add('black', sideRect(S, side, S.axles[0] + S.archR + 0.02, S.axles[1] - S.archR - 0.02, S.botRaw(2.4) + 0.005, S.botRaw(2.4) + 0.06, 0.004, 12, 1));
-}
-
-function lc300Details(S: BodyShape, parts: Parts, ex: Parts): void {
-  const L = S.L;
-  // big grille: chrome frame, black field, three thick chrome bars
-  ex.add('chrome', capRect(S, false, -0.62, 0.62, 0.6, 0.95, 0.006));
-  ex.add('black', capRect(S, false, -0.58, 0.58, 0.63, 0.92, 0.012));
-  for (const v of [0.69, 0.775, 0.86]) ex.add('chrome', rbox(1.14, 0.03, 0.03, 0.012, 0, S.ground + v, S.zF - 0.022, 2));
-  // headlamps: slim LED units at the top corners, wrapping onto the wings
-  for (const side of [-1, 1]) {
-    ex.add('reflector', capQuad(S, false, [[side * 0.64, 0.84], [side * 0.93, 0.85], [side * 0.93, 0.96], [side * 0.64, 0.95]], 0.008));
-    for (let i = 0; i < 3; i++) ex.add('lens', capRect(S, false, side * (0.68 + i * 0.075), side * (0.73 + i * 0.075), 0.87, 0.93, 0.012));
-    ex.add('drl', capRect(S, false, side * 0.66, side * 0.92, 0.845, 0.857, 0.012));
-    ex.add('reflector', sideRect(S, side, 0.01, 0.2, 0.86, 0.96, 0.004, 4, 2));
-    ex.add('amber', sideRect(S, side, 0.03, 0.17, 0.83, 0.85, 0.005, 3, 1));
-  }
-  // front bumper: body colour with a black lower air dam, fog lamps and a skid plate
-  parts.add('paint', rbox(1.86, 0.2, 0.22, 0.06, 0, S.ground + 0.55, S.zF + 0.05, 3));
-  ex.add('black', rbox(1.5, 0.08, 0.06, 0.02, 0, S.ground + 0.5, S.zF - 0.065, 2));
-  ex.add('alu', rbox(0.9, 0.05, 0.2, 0.02, 0, S.ground + 0.42, S.zF + 0.05, 2));
-  for (const side of [-1, 1]) {
-    ex.add('black', rbox(0.2, 0.09, 0.04, 0.02, side * 0.72, S.ground + 0.5, S.zF - 0.06, 2));
-    ex.add('lens', rbox(0.12, 0.035, 0.02, 0.01, side * 0.72, S.ground + 0.5, S.zF - 0.08, 1));
-  }
-  // rear: horizontal tail lamps at the shoulder linked by a chrome strip, rear bumper with step pad
-  for (const side of [-1, 1]) {
-    ex.add('tail', capQuad(S, true, [[side * 0.55, 1.06], [side * 0.93, 1.06], [side * 0.93, 1.17], [side * 0.55, 1.17]], 0.006));
-    ex.add('tailDark', capRect(S, true, side * 0.6, side * 0.78, 1.09, 1.14, 0.009));
-    ex.add('tail', sideRect(S, side, L - 0.2, L - 0.005, 1.06, 1.17, 0.004, 4, 2));
-  }
-  ex.add('chrome', capRect(S, true, -0.55, 0.55, 1.1, 1.13, 0.008));
-  parts.add('paint', rbox(1.92, 0.22, 0.2, 0.06, 0, S.ground + 0.6, S.zF + L - 0.06, 3));
-  ex.add('black', rbox(1.4, 0.04, 0.14, 0.015, 0, S.ground + 0.715, S.zF + L - 0.03, 2));
-  // mud flaps
-  for (const ua of S.axles) for (const side of [-1, 1]) ex.add('rubber', box(0.22, 0.2, 0.01, side * (S.sideX(ua, 0.5) - 0.12), S.ground + 0.38, S.zF + ua + S.archR + 0.04));
-}
-
 function patrolDetails(S: BodyShape, parts: Parts, ex: Parts): void {
   const L = S.L;
   // chrome grille with horizontal bars and a vertical centre divider
@@ -809,49 +729,4 @@ function patrolDetails(S: BodyShape, parts: Parts, ex: Parts): void {
   parts.add('paint', topRect(S, 0.25, 1.15, -0.32, 0.32, 0.018, 10, 8));
   // mud flaps
   for (const ua of S.axles) for (const side of [-1, 1]) ex.add('rubber', box(0.24, 0.22, 0.01, side * (S.sideX(ua, 0.5) - 0.12), S.ground + 0.36, S.zF + ua + S.archR + 0.05));
-}
-
-function lc70Details(S: BodyShape, parts: Parts, ex: Parts): void {
-  const L = S.L;
-  const bedU = S.d.bedU ?? 2.66;
-  // wide grille with horizontal slats; rectangular LED headlamps; indicators in the wing corners
-  ex.add('black', capRect(S, false, -0.56, 0.56, 0.66, 0.97, 0.008));
-  slats(S, ex, 'satin', -0.54, 0.54, 0.68, 0.95, 6, 0.016, 0.02);
-  for (const side of [-1, 1]) {
-    ex.add('black', capRect(S, false, side * 0.58, side * 0.86, 0.77, 0.95, 0.006));
-    ex.add('reflector', capRect(S, false, side * 0.6, side * 0.84, 0.79, 0.93, 0.01));
-    ex.add('lens', capRect(S, false, side * 0.62, side * 0.72, 0.81, 0.91, 0.013));
-    ex.add('lens', capRect(S, false, side * 0.73, side * 0.82, 0.81, 0.91, 0.013));
-    ex.add('drl', capRect(S, false, side * 0.6, side * 0.84, 0.78, 0.79, 0.013));
-    ex.add('amber', capRect(S, false, side * 0.6, side * 0.8, 0.7, 0.75, 0.007));
-  }
-  // heavy black steel bumper with a winch fairlead, recovery points and a rear step bumper
-  ex.add('black', rbox(1.95, 0.24, 0.24, 0.03, 0, S.ground + 0.55, S.zF - 0.03, 2));
-  ex.add('alu', rbox(0.25, 0.08, 0.05, 0.01, 0, S.ground + 0.58, S.zF - 0.16, 1));
-  for (const side of [-1, 1]) ex.add('chrome', new THREE.TorusGeometry(0.03, 0.01, 6, 12).translate(side * 0.45, S.ground + 0.5, S.zF - 0.16));
-  ex.add('black', rbox(1.9, 0.16, 0.18, 0.03, 0, S.ground + 0.6, S.zF + L + 0.05, 2));
-  // bed: floor, inner walls, headboard, tailgate inner face, rails, and a headboard guard
-  const floorV = 0.95, topV = S.top(L / 2) - 0.02;
-  const xIn = S.sideX((bedU + L) / 2, topV) - 0.045;
-  const bl = L - 0.05 - bedU, bz = S.zF + (bedU + L - 0.05) / 2;
-  ex.add('satin', box(xIn * 2, 0.02, bl, 0, S.ground + floorV, bz));
-  for (const side of [-1, 1]) ex.add('satin', box(0.02, topV - floorV, bl, side * xIn, S.ground + (topV + floorV) / 2, bz));
-  ex.add('satin', box(xIn * 2, topV - floorV, 0.03, 0, S.ground + (topV + floorV) / 2, S.zF + bedU + 0.015));
-  ex.add('satin', box(xIn * 2, topV - floorV, 0.02, 0, S.ground + (topV + floorV) / 2, S.zF + L - 0.05));
-  for (let i = 0; i < 6; i++) ex.add('black', box(0.03, 0.012, bl, lerp(-xIn + 0.15, xIn - 0.15, i / 5), S.ground + floorV + 0.012, bz));
-  for (const side of [-1, 1]) ex.add('black', box(0.06, 0.012, bl, side * (xIn + 0.03), S.ground + topV + 0.025, bz));
-  const gv = topV + 0.02;
-  for (const side of [-1, 1]) ex.add('black', cyl(0.025, 0.42, 10).translate(side * (xIn - 0.05), S.ground + gv + 0.21, S.zF + bedU + 0.05));
-  ex.add('black', cyl(0.025, xIn * 2 - 0.1, 10).rotateZ(Math.PI / 2).translate(0, S.ground + gv + 0.42, S.zF + bedU + 0.05));
-  for (let i = 0; i < 5; i++) ex.add('black', box(0.015, 0.4, 0.015, lerp(-xIn + 0.25, xIn - 0.25, i / 4), S.ground + gv + 0.2, S.zF + bedU + 0.05));
-  // tail lamps on the rear corners, tailgate handle
-  for (const side of [-1, 1]) {
-    ex.add('tail', capRect(S, true, side * 0.72, side * 0.86, 0.78, 1.05, 0.006));
-    ex.add('amber', capRect(S, true, side * 0.72, side * 0.86, 0.7, 0.77, 0.006));
-  }
-  ex.add('black', rbox(0.2, 0.04, 0.03, 0.01, 0, S.ground + 1.08, S.zF + L + 0.012, 1));
-  // bonnet scoop (intercooler) and mud flaps
-  parts.add('paint', rbox(0.5, 0.06, 0.32, 0.025, 0, S.ground + S.topAt(0.9, 0) + 0.02, S.zF + 0.9, 2));
-  ex.add('black', box(0.4, 0.03, 0.01, 0, S.ground + S.topAt(0.9, 0) + 0.03, S.zF + 0.74));
-  for (const ua of S.axles) for (const side of [-1, 1]) ex.add('rubber', box(0.24, 0.24, 0.01, side * (S.sideX(ua, 0.5) - 0.12), S.ground + 0.4, S.zF + ua + S.archR + 0.06));
 }

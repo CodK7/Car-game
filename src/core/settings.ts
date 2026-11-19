@@ -12,6 +12,8 @@ export interface Settings {
   scale: number;
   showFps: boolean;
   touch: TouchMode;
+  /** automatic counter-steer while sliding (src/config/drift.json) */
+  driftAssist: boolean;
 }
 
 export interface KV { getItem(k: string): string | null; setItem(k: string, v: string): void }
@@ -39,11 +41,12 @@ export function maxDpr(mobile = isMobileDevice()): number {
 /** Clamp/repair any stored or edited settings object. */
 export function sanitize(s: Partial<Settings>, base: Settings = defaultSettings()): Settings {
   const out = { ...base };
-  if (s.quality && ['auto', 'low', 'medium', 'high'].includes(s.quality)) out.quality = s.quality;
+  if (s.quality && ['auto', 'low', 'medium', 'high', 'ultra', 'legendary'].includes(s.quality)) out.quality = s.quality;
   if (typeof s.fpsCap === 'number' && Number.isFinite(s.fpsCap)) out.fpsCap = s.fpsCap <= 0 ? 0 : Math.min(Math.max(Math.round(s.fpsCap), 15), 240);
   if (typeof s.scale === 'number' && Number.isFinite(s.scale)) out.scale = s.scale <= 0 ? 0 : Math.min(Math.max(s.scale, SCALE.min), SCALE.max);
   if (typeof s.showFps === 'boolean') out.showFps = s.showFps;
   if (s.touch && ['auto', 'on', 'off'].includes(s.touch)) out.touch = s.touch;
+  if (typeof s.driftAssist === 'boolean') out.driftAssist = s.driftAssist;
   return out;
 }
 

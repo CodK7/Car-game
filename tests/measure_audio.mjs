@@ -15,7 +15,7 @@ const server = await startServer();
 const browser = await launch({ headless: false, width: 1280, height: 720 });
 const out = {};
 try {
-  for (const veh of ['patrol', 'lc70']) {
+  for (const veh of ['patrol']) {
     const { page, errors } = await openGame(browser, `${server.url}?veh=${veh}&autodrive&debug&quality=low`);
     await page.bringToFront();
     await page.mouse.click(640, 360);

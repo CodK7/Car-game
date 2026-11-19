@@ -19,6 +19,7 @@ const CSS = `
 #settings input[type=range] { flex:1; min-width:140px; accent-color:var(--sand); height:32px; }
 #settings .val { font:13px Consolas,monospace; color:var(--text); min-width:120px; }
 #settings .note { color:var(--dim); font-size:12px; margin-top:4px; }
+#settings .note.warn { color:var(--warn); }
 `;
 
 export class SettingsUi {
@@ -94,6 +95,7 @@ export class SettingsUi {
     if (k === 'scaleAuto') this.update({ scale: 0 });
     if (k === 'showFps') this.update({ showFps: v === '1' });
     if (k === 'touch') this.update({ touch: v as TouchMode });
+    if (k === 'drift') this.update({ driftAssist: v === '1' });
     if (k === 'reset') this.update(defaultSettings());
     if (k === 'lang') {
       if (this.app.game) this.app.game.setLanguage(v as Lang);
@@ -139,12 +141,14 @@ export class SettingsUi {
     const isFull = !!(d.fullscreenElement || d.webkitFullscreenElement);
     const scale = s.scale || this.app.quality.q.renderScale;
     let h = `<h2><span>${t('set.title')}</span>${btn('close', '✕')}</h2>`;
-    h += `<h3>${t('set.quality')}</h3><div class="row">${(['auto', 'low', 'medium', 'high'] as const).map((q) => btn('quality:' + q, t('set.q.' + q), s.quality === q)).join('')}</div>`;
+    h += `<h3>${t('set.quality')}</h3><div class="row">${(['auto', 'low', 'medium', 'high', 'ultra', 'legendary'] as const).map((q) => btn('quality:' + q, t('set.q.' + q), s.quality === q)).join('')}</div>`;
     if (s.quality === 'auto') h += `<div class="note">${t('set.autoNow', t('set.q.' + this.app.quality.name))}</div>`;
+    if (s.quality === 'ultra' || s.quality === 'legendary') h += `<div class="note warn">${t('set.heavy')}</div>`;
     h += `<h3>${t('set.fps')}</h3><div class="row">${FPS_OPTIONS.map((f) => btn('fps:' + f, f ? String(f) : t('set.noLimit'), s.fpsCap === f)).join('')}</div>`;
     h += `<h3>${t('set.res')}</h3><div class="row">${btn('scaleAuto', t('set.q.auto'), s.scale === 0)}<input type="range" data-s="scale" min="${SCALE.min}" max="${SCALE.max}" step="${SCALE.step}" value="${scale}"><span class="val" dir="ltr">${this.scaleText()}</span></div>`;
     h += `<div class="note">${t('set.resNote')}</div>`;
     h += `<h3>${t('set.showFps')}</h3><div class="row">${btn('showFps:1', t('set.on'), s.showFps)}${btn('showFps:0', t('set.off'), !s.showFps)}</div>`;
+    h += `<h3>${t('set.drift')}</h3><div class="row">${btn('drift:1', t('set.on'), s.driftAssist)}${btn('drift:0', t('set.off'), !s.driftAssist)}</div><div class="note">${t('set.driftNote')}</div>`;
     h += `<h3>${t('set.touch')}</h3><div class="row">${(['auto', 'on', 'off'] as const).map((m) => btn('touch:' + m, t('set.t.' + m), s.touch === m)).join('')}</div>`;
     h += `<h3>${t('set.lang')}</h3><div class="row">${btn('lang:ar', 'العربية', getLang() === 'ar')}${btn('lang:en', 'English', getLang() === 'en')}</div>`;
     h += `<h3></h3><div class="row">${canFull ? btn('full', isFull ? t('set.fullOff') : t('set.fullOn')) : ''}${btn('reset', t('set.reset'))}</div>`;

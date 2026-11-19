@@ -1,5 +1,5 @@
 // URL parameters: every runtime switch is reachable from the address bar.
-// Example: /?debug&quality=low&tod=17.2&mode=fly&veh=lc70&x=0&z=0
+// Example: /?debug&quality=low&tod=17.2&mode=fly&veh=patrol&x=0&z=0
 const q = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
 const num = (k: string): number | undefined => {
   const v = q.get(k);
@@ -8,7 +8,7 @@ const num = (k: string): number | undefined => {
   return Number.isFinite(n) ? n : undefined;
 };
 
-export type QualityName = 'low' | 'medium' | 'high' | 'auto';
+export type QualityName = 'low' | 'medium' | 'high' | 'ultra' | 'legendary' | 'auto';
 
 export const P = {
   debug: q.has('debug'),
