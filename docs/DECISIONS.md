@@ -175,6 +175,16 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - **U3.2 Bound to 127.0.0.1 only**, with no LAN exposure. The port starts at 8080 and the next free one is taken.
 - **U3.3 The shared build never contains `public/local`.** It is deleted after the build, a `.glb` check stops the script, and Vite mode `share` disables the model probe.
 
+## U4 — settings + phones/tablets (2026-11-19)
+
+- Settings are per browser (localStorage), separate from the save game. URL parameters override them for automation.
+- FPS limit skips rAF callbacks with a phase-keeping limiter (1 ms tolerance), instead of setTimeout pacing. It stays smooth on 60/120/144 Hz displays.
+- Resolution = render scale × min(devicePixelRatio, maxDpr). maxDpr is 1.5 on mobile, which keeps phones from rendering at 3× DPR.
+- Mobile defaults are Low + 30 FPS cap. ASSUMPTION: phone GPUs are around or below the UHD 630 floor, and 30 FPS saves battery and heat.
+- Touch controls are DOM buttons over the canvas, using pointer events (multi-touch). They feed the same Input class as the keyboard. Auto shows them on a coarse pointer / iPadOS, or after the first touch.
+- No new "phone" quality preset yet: we wait for a real-device measurement before adding one.
+- `npm run dev` still listens on 127.0.0.1 only. `npm run dev:lan` opens the dev server to the local network for phone testing.
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).

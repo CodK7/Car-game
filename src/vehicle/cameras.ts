@@ -47,14 +47,14 @@ export class VehicleCamera {
       cam.updateProjectionMatrix();
     }
     if (this.mode === 'chase') {
-      if (input.dragging) {
+      if (input.orbiting) {
         this.yawOff -= input.mouseDX * 0.005;
         this.pitchOff = Math.min(1.2, Math.max(-0.1, this.pitchOff + input.mouseDY * 0.004));
       }
       const [lx, ly] = input.padLook();
       this.yawOff -= lx * dt * 2.5;
       this.pitchOff = Math.min(1.2, Math.max(-0.1, this.pitchOff + ly * dt * 1.5));
-      if (!this.orbitHold && !input.dragging && Math.abs(lx) < 0.01) this.yawOff *= Math.exp(-dt * 0.8);
+      if (!this.orbitHold && !input.orbiting && Math.abs(lx) < 0.01) this.yawOff *= Math.exp(-dt * 0.8);
       if (input.wheel) this.distance = Math.min(30, Math.max(4, this.distance * (1 + input.wheel * 0.001)));
       // follow the body heading (smoothed)
       const f = this.tv.copy(v.fwd);
@@ -82,7 +82,7 @@ export class VehicleCamera {
       local.applyQuaternion(v.quat).add(v.pos);
       cam.position.copy(local);
       cam.quaternion.copy(v.quat);
-      if (this.mode === 'cockpit' && input.dragging) this.yawOff -= input.mouseDX * 0.004;
+      if (this.mode === 'cockpit' && input.orbiting) this.yawOff -= input.mouseDX * 0.004;
       else this.yawOff *= Math.exp(-dt * 2);
       cam.rotateY(this.yawOff);
       cam.rotateX(-0.04);

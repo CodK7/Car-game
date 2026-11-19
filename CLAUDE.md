@@ -19,6 +19,7 @@ A realistic open-world dune-bashing ("تطعيس") game set in Ramlat Al Wahiba 
 | What | Command |
 |---|---|
 | Run the game | `npm run dev` then open http://localhost:5173 (`?debug` shows the tuning panel + FPS) |
+| Play on a phone/iPad (same Wi-Fi) | `npm run dev:lan` then open http://<PC IP>:5173 on the device |
 | Unit tests (Vitest) | `npm test` |
 | Headless smoke test (loads the game in Edge/Chrome, fails on console errors) | `npm run smoke` |
 | Type-check + production build | `npm run build` |

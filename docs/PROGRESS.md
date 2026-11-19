@@ -17,6 +17,31 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | U1 — language + cars | DONE | 86 tests, smoke 5/5, `docs/evidence/cars_*.png`, Low FPS 72–74 |
 | U2 — local Patrol VTC model | DONE (local only) | 89 tests, smoke with and without the GLB, Low FPS 64 with the model |
 | U3 — shareable zip | DONE | `npm run share` → `release/WahibaSands.zip` (34.7 MB), tested from a clean extract, 0 console errors |
+| U4 — settings + phone/tablet | DONE (no real phone tested) | 97 tests, smoke 5/5, `tests/measure_fpscap.mjs`, phone-size check in the Browser pane |
+
+## U4 — settings button + phones and tablets (DONE, 2026-11-19)
+
+User request: a settings button to control FPS and resolution, and the game should run on phone, iPad and PC.
+
+- Gear button (⚙, top-left, also on the start screen) → `src/game/settingsUi.ts`. Saved in localStorage (`wahiba.settings.v1`, `src/core/settings.ts`).
+  - Graphics quality: Auto / Low / Medium / High.
+  - FPS limit: none / 30 / 45 / 60 / 90 / 120 (`FrameLimiter` in the rAF loop).
+  - Resolution: Auto (preset) or 30–150 % render scale, with the real pixel size shown.
+  - Also: FPS counter, touch controls Auto/On/Off, fullscreen (where the browser allows it), language, reset to defaults.
+  - URL parameters `?quality` / `?scale` still win, so scripts and smoke tests are unchanged.
+- Phones and tablets get lighter defaults (`src/config/settings.json`): Low, 30 FPS cap, DPR capped at 1.5 (desktop 1.25).
+- Touch controls (`src/core/touch.ts`) are shown on touch devices, or after the first finger touch when set to Auto.
+  - Left: floating steering stick (analog). Right: gas, brake/reverse, handbrake.
+  - Top: menu, camera, reset, 4×4 mode cycle, tyre psi −/+. Bottom: winch, reel in (hold), recovery car, dig.
+  - Dragging on empty screen orbits the camera.
+  - The buttons feed `Input.virt` / `Input.hold(code)`, so the game logic did not change.
+- Viewport meta for mobile: no pinch zoom, safe-area insets (notch), `touch-action: none` on the canvas. Smaller HUD on small screens.
+- Phone on the same Wi-Fi: `npm run dev:lan`, then open `http://<PC IP>:5173` on the phone.
+- Measured FPS limit (real Edge window, 60 Hz): cap 0/30/45/60 → 59.6 / 30.0 / 44.8 / 59.7 FPS (`tests/measure_fpscap.mjs`).
+- Phone-size check (Browser pane, 740×360, Android UA): mobile defaults were applied and the touch controls showed. Synthetic touch input:
+  - gas + stick → throttle 1, steer 0.72, the car moved; both returned to 0 on release.
+  - the 4×4 button cycled 4H → 4L, and the camera button switched chase → bonnet.
+- **Unverified:** no real phone or iPad was tested (FPS, memory for the 32 MB heightmap, iOS Safari WebGL2/half-float, audio). Fullscreen is not available on iPhone Safari.
 
 ## U3 — shareable zip for friends (DONE, 2026-11-18)
 

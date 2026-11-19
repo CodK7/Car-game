@@ -15,7 +15,7 @@ import { PRESETS } from '../vehicle/vehicleSim';
 export const VEHICLES = Object.keys(PRESETS).filter((k) => !k.startsWith('_'));
 
 const CSS = `
-#panel { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(860px,94vw); max-height:86vh; overflow:auto; background:rgba(24,17,11,.93); border:1px solid var(--line); border-radius:12px; padding:14px 18px; font:13px/1.45 "Segoe UI",system-ui,sans-serif; display:none; }
+#panel { z-index:5; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(860px,94vw); max-height:86vh; overflow:auto; background:rgba(24,17,11,.93); border:1px solid var(--line); border-radius:12px; padding:14px 18px; font:13px/1.45 "Segoe UI",system-ui,sans-serif; display:none; }
 #panel h2 { margin:0 0 8px; font-size:18px; color:var(--sand); display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
 #panel h3 { margin:12px 0 4px; font-size:14px; color:var(--text); }
 #panel .row { display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:3px 0; }
@@ -39,6 +39,8 @@ export class Game {
   /** start screen visible: no game keys, physics paused */
   locked = false;
   photo = false;
+  /** settings panel (gear button) is open: pause driving like the menu */
+  settingsOpen = false;
   private panel: HTMLDivElement;
   private beacon: THREE.Mesh;
   private saveT = 0;
@@ -76,7 +78,7 @@ export class Game {
   }
 
   get busy(): boolean {
-    return this.open || this.photo;
+    return this.open || this.photo || this.settingsOpen;
   }
 
   update(dt: number, input: Input): void {
@@ -92,7 +94,7 @@ export class Game {
       if (input.down('Period')) this.tod.hour = Math.min(19.5, this.tod.hour + dt * 0.5);
       if (input.hit('Escape')) this.setPhoto(false);
     }
-    this.drive.blocked = this.open;
+    this.drive.blocked = this.open || this.settingsOpen;
     this.drive.frozen = this.photo;
     const d = this.drive, m = this.missions;
     const before = m.status;
@@ -130,7 +132,7 @@ export class Game {
     if (on) {
       this.open = false;
       this.panel.style.display = 'none';
-      this.hidden = ['hud', 'help', 'stats'].map((id) => document.getElementById(id)!).filter((e) => e && e.style.display !== 'none');
+      this.hidden = ['hud', 'help', 'stats', 'touch', 'gear', 'fps'].map((id) => document.getElementById(id)!).filter((e) => e && e.style.display !== 'none');
       for (const e of this.hidden) e.style.visibility = 'hidden';
       this.drive.cam.orbitHold = true;
       this.drive.flash(t('game.photoHelp'));

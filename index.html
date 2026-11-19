@@ -2,13 +2,18 @@
 <html lang="ar" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="theme-color" content="#120d09" />
     <title>Wahiba Sands Off-Road</title>
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 12 Q5 5 9 9 T16 8 V16 H0Z' fill='%23e2a15c'/%3E%3C/svg%3E" />
     <style>
       :root { --sand: #e2a15c; --ink: #1d1611; --panel: rgba(24, 17, 11, 0.72); --line: rgba(255, 220, 170, 0.22); --text: #f6e7d2; --dim: #c9b193; --warn: #ffb347; --bad: #ff6b57; --ok: #9fd68a; }
-      html, body { margin: 0; height: 100%; overflow: hidden; background: #120d09; color: var(--text); font-family: "Segoe UI", Tahoma, system-ui, sans-serif; }
-      canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; }
+      html, body { margin: 0; height: 100%; overflow: hidden; background: #120d09; color: var(--text); font-family: "Segoe UI", Tahoma, system-ui, sans-serif; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; -webkit-text-size-adjust: 100%; }
+      html.touch, html.touch body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+      canvas#view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
       #loading { position: fixed; inset: 0; display: flex; align-items: flex-start; justify-content: center; background: radial-gradient(ellipse at 50% 70%, #5a3518 0%, #1a110a 70%); z-index: 50; transition: opacity 0.6s, background 0.8s; overflow: auto; }
       #loading.ready { background: linear-gradient(90deg, rgba(18, 12, 8, 0.86) 0%, rgba(18, 12, 8, 0.55) 55%, rgba(18, 12, 8, 0.1) 100%); }
       html.rtl #loading.ready { background: linear-gradient(270deg, rgba(18, 12, 8, 0.86) 0%, rgba(18, 12, 8, 0.55) 55%, rgba(18, 12, 8, 0.1) 100%); }
@@ -34,13 +39,45 @@
       #loading.err .msg { color: var(--bad); white-space: pre-wrap; }
       #ui { position: fixed; inset: 0; pointer-events: none; z-index: 10; font-size: 13px; }
       #ui > * { pointer-events: auto; }
-      #stats { position: absolute; left: 8px; top: 8px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font: 12px/1.45 Consolas, monospace; white-space: pre; pointer-events: none; display: none; }
-      #hud { position: absolute; right: 10px; top: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; font: 13px/1.5 Consolas, "Segoe UI", Tahoma, monospace; white-space: pre; pointer-events: none; min-width: 190px; }
+      #stats { position: absolute; left: 8px; top: 56px; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 6px 9px; font: 12px/1.45 Consolas, monospace; white-space: pre; pointer-events: none; display: none; }
+      #hud { position: absolute; right: calc(10px + env(safe-area-inset-right)); top: calc(10px + env(safe-area-inset-top)); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 11px; font: 13px/1.5 Consolas, "Segoe UI", Tahoma, monospace; white-space: pre; pointer-events: none; min-width: 190px; }
       #hud .big { font-size: 26px; font-weight: 600; }
       #msg { position: absolute; left: 50%; top: 14%; transform: translateX(-50%); font: 600 18px/1.3 "Segoe UI", Tahoma, system-ui, sans-serif; color: #fff; text-shadow: 0 1px 4px #000a; pointer-events: none; text-align: center; transition: opacity 0.4s; max-width: 90vw; }
       #help { position: absolute; left: 8px; bottom: 8px; font: 11px/1.45 Consolas, "Segoe UI", Tahoma, monospace; color: rgba(255,255,255,0.7); white-space: pre-wrap; max-width: 70vw; pointer-events: none; text-shadow: 0 1px 2px #000; }
       #help[dir=rtl] { left: auto; right: 8px; bottom: 22px; text-align: right; }
       #credits { position: absolute; right: 8px; bottom: 6px; font-size: 10px; color: rgba(255, 255, 255, 0.45); pointer-events: none; text-align: right; }
+      /* touch controls (src/core/touch.ts): shown on phones/tablets once the game has started */
+      #ui > #touch { position: absolute; inset: 0; pointer-events: none; display: none; }
+      html.touch.playing #ui > #touch { display: block; }
+      html.touch #help, html.touch #loading .keys { display: none; }
+      #touch button { pointer-events: auto; touch-action: none; font: 600 16px/1 "Segoe UI", Tahoma, system-ui, sans-serif; color: var(--text); background: rgba(24, 17, 11, 0.55); border: 1px solid var(--line); border-radius: 12px; padding: 0; -webkit-user-select: none; user-select: none; }
+      #touch button.down { background: rgba(226, 161, 92, 0.8); color: var(--ink); }
+      #touch .top { position: absolute; left: calc(58px + env(safe-area-inset-left)); top: calc(8px + env(safe-area-inset-top)); display: flex; gap: 6px; }
+      #touch .tb { width: 44px; height: 42px; }
+      #touch .tb.wide { width: 54px; font-size: 14px; }
+      #touch .rec { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(22px + env(safe-area-inset-bottom)); display: flex; gap: 8px; }
+      #touch .pedals { position: absolute; right: calc(14px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); display: flex; gap: 12px; align-items: flex-end; }
+      #touch .pedal { width: 82px; height: 82px; border-radius: 16px; font-size: 26px; }
+      #touch .pedal.gas { height: 132px; background: rgba(60, 110, 50, 0.55); }
+      #touch .pedal.brake { height: 104px; background: rgba(120, 45, 35, 0.55); }
+      #touch .pedal.hb { width: 62px; height: 62px; font-size: 15px; }
+      #touch .zone { position: absolute; left: 0; bottom: 0; width: 42%; height: 62%; pointer-events: auto; touch-action: none; }
+      #touch .base { position: absolute; left: calc(110px + env(safe-area-inset-left)); top: calc(100% - 110px - env(safe-area-inset-bottom)); width: 136px; height: 136px; margin: -68px 0 0 -68px; border-radius: 50%; border: 2px solid rgba(255, 230, 190, 0.35); background: rgba(24, 17, 11, 0.3); }
+      #touch .base.active { border-color: rgba(255, 230, 190, 0.6); }
+      #touch .knob { position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%; background: rgba(226, 161, 92, 0.75); }
+      html.touch #credits { right: 50%; transform: translateX(50%); bottom: calc(2px + env(safe-area-inset-bottom)); white-space: nowrap; font-size: 9px; }
+      html.touch #msg { top: 22%; }
+      @media (max-width: 900px), (max-height: 520px) {
+        #hud { font-size: 11px; line-height: 1.35; min-width: 0; padding: 5px 8px; }
+        #hud .big { font-size: 19px; }
+        #touch .tb { width: 40px; height: 38px; font-size: 15px; }
+        #touch .tb.wide { width: 46px; font-size: 12px; }
+        #touch .pedal { width: 70px; height: 70px; }
+        #touch .pedal.gas { height: 112px; }
+        #touch .pedal.brake { height: 88px; }
+        #touch .pedal.hb { width: 54px; height: 54px; }
+        #touch .rec { gap: 6px; bottom: calc(16px + env(safe-area-inset-bottom)); }
+      }
       @media (max-height: 520px) { #loading .wrap { gap: 7px; padding: 10px 0; } #loading h3 { margin-top: 4px; } #loading .car { min-height: 0; } #loading .keys { display: none; } }
     </style>
   </head>
@@ -52,6 +89,7 @@
       <div id="msg"></div>
       <div id="help"></div>
       <div id="credits"></div>
+      <div id="fps"></div>
     </div>
     <div id="loading">
       <div class="wrap">

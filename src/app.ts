@@ -22,6 +22,7 @@ import { NetClient } from './game/net';
 import { AudioSystem } from './audio/audioSystem';
 import { ObjShadows } from './gfx/shadows';
 import { PostFx } from './gfx/post';
+import { Settings, loadSettings, writeSettings, FrameLimiter, maxDpr } from './core/settings';
 
 export class App {
   renderer!: THREE.WebGLRenderer;
@@ -29,7 +30,12 @@ export class App {
   camera = new THREE.PerspectiveCamera(60, 1, 0.4, 45000);
   input!: Input;
   perf = new Perf();
-  quality = new QualityManager();
+  /** player settings (gear button); URL parameters (?quality, ?scale) still win for scripts */
+  settings: Settings = loadSettings();
+  quality = new QualityManager(P.raw.has('quality') ? P.quality : this.settings.quality, this.settings.scale);
+  limiter = new FrameLimiter();
+  private fpsEl = document.getElementById('fps');
+  private fpsT = 0;
   tod = new TimeOfDay();
   assets!: WorldAssets;
   terrain!: Terrain;
@@ -163,20 +169,40 @@ export class App {
   resize(): void {
     const w = this.canvas.clientWidth || window.innerWidth;
     const h = this.canvas.clientHeight || window.innerHeight;
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.25) * this.quality.q.renderScale;
+    const dpr = Math.min(window.devicePixelRatio || 1, maxDpr()) * this.quality.q.renderScale;
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / Math.max(h, 1);
     this.camera.updateProjectionMatrix();
   }
 
+  /** Apply (and save) player settings. Safe to call before init(): the renderer picks them up when it exists. */
+  applySettings(s: Settings): void {
+    this.settings = s;
+    writeSettings(s);
+    this.limiter.cap = s.fpsCap;
+    if (!P.raw.has('quality')) this.quality.setMode(s.quality);
+    this.quality.setScale(s.scale);
+    if (this.fpsEl) this.fpsEl.style.display = s.showFps ? 'block' : 'none';
+    if (this.renderer) this.resize();
+  }
+
+  /** internal render resolution in pixels (settings panel label) */
+  renderSize(): [number, number] {
+    if (!this.renderer) return [0, 0];
+    const c = this.renderer.domElement;
+    return [c.width, c.height];
+  }
+
   start(): void {
+    this.limiter.cap = this.settings.fpsCap;
+    if (this.fpsEl) this.fpsEl.style.display = this.settings.showFps ? 'block' : 'none';
     this.last = performance.now();
     let lastRaf = performance.now();
     const loop = (now: number) => {
       requestAnimationFrame(loop);
       lastRaf = now;
-      if (!this.manual) this.frame(now);
+      if (!this.manual && this.limiter.tick(now)) this.frame(now);
     };
     requestAnimationFrame(loop);
     // Hidden panes/tabs stop requestAnimationFrame; keep the simulation alive at a low rate so tools can still inspect it.
@@ -244,6 +270,13 @@ export class App {
     this.game?.afterRender();
     this.input.endFrame();
 
+    this.fpsT += dt;
+    if (this.settings.showFps && this.fpsEl && this.fpsT > 0.5) {
+      this.fpsT = 0;
+      const s = this.perf.recent();
+      const [w, h] = this.renderSize();
+      this.fpsEl.textContent = `${s.fps.toFixed(0)} FPS · ${w}×${h}`;
+    }
     this.statsT += dt;
     if (P.debug && this.statsT > 0.5) {
       this.statsT = 0;

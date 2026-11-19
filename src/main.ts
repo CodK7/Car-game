@@ -7,6 +7,8 @@ import { PRESETS } from './vehicle/vehicleSim';
 import { peakPowerKW } from './game/garage';
 import { VEHICLES, driveText } from './game/game';
 import { loadSave } from './game/save';
+import { SettingsUi } from './game/settingsUi';
+import { TouchControls } from './core/touch';
 
 const loading = document.getElementById('loading')!;
 const msg = loading.querySelector('.msg') as HTMLElement;
@@ -20,6 +22,8 @@ if (!PRESETS[chosen]) chosen = 'patrol';
 let stage = '';
 let app: App | null = null;
 let ready = false;
+let settingsUi: SettingsUi | null = null;
+let touch: TouchControls | null = null;
 
 function stageText(m: string): string {
   const hm = /^heightmap (.*)$/.exec(m);
@@ -59,6 +63,7 @@ function enter(): void {
     if (app.game.drive.kind !== chosen) app.game.applyVehicle(chosen);
     app.game.locked = false;
   }
+  document.documentElement.classList.add('playing');
   loading.style.opacity = '0';
   loading.style.pointerEvents = 'none';
   setTimeout(() => loading.remove(), 700);
@@ -68,6 +73,7 @@ function enter(): void {
 async function boot(): Promise<void> {
   renderTexts();
   app = new App(canvas);
+  settingsUi = new SettingsUi(app);
   try {
     await app.init((m) => {
       stage = m;
@@ -78,6 +84,11 @@ async function boot(): Promise<void> {
       if (app.game.drive.kind !== chosen && !P.veh) app.game.applyVehicle(chosen);
     }
     app.start();
+    if (app.input && app.game) {
+      touch = new TouchControls(app.input, canvas, document.getElementById('ui')!);
+      settingsUi.onTouch = (on) => !on && touch?.reset();
+      onLangChange(() => touch?.relabel());
+    }
     ready = true;
     goBtn.disabled = false;
     loading.classList.add('ready');

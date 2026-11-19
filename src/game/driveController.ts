@@ -49,6 +49,11 @@ export class DriveController {
     if (input.hit('Digit1')) this.setMode(v, '2H');
     if (input.hit('Digit2')) this.setMode(v, '4H');
     if (input.hit('Digit3') || input.padHit(3)) this.setMode(v, v.mode === '4L' ? '4H' : '4L');
+    if (input.hit('TouchMode')) {
+      // on-screen 4x4 button: next available mode (2H → 4H → 4L → 2H)
+      const modes = v.spec.driveline.modes ?? ['2H', '4H', '4L'];
+      this.setMode(v, modes[(modes.indexOf(v.mode) + 1) % modes.length] as '2H' | '4H' | '4L');
+    }
     if (input.hit('KeyL')) {
       v.rearLock = !v.rearLock && v.spec.driveline.rearLocker;
       this.say(v.spec.driveline.rearLocker ? t('ctl.rearLock', t(v.rearLock ? 'ctl.on' : 'ctl.off')) : t('ctl.noRear'));

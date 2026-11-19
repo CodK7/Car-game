@@ -1,4 +1,4 @@
-// Keyboard + gamepad input mapped to abstract driving controls.
+// Keyboard + gamepad + on-screen touch input mapped to abstract driving controls.
 export interface Controls {
   throttle: number; // 0..1
   brake: number; // 0..1
@@ -16,8 +16,16 @@ export class Input {
   mouseDY = 0;
   wheel = 0;
   dragging = false;
+  /** a finger is dragging the camera (src/core/touch.ts) */
+  touchDrag = false;
+  /** mouse or touch drag is orbiting the camera */
+  get orbiting(): boolean {
+    return this.dragging || this.touchDrag;
+  }
   padConnected = false;
   private steerKb = 0;
+  /** on-screen touch controls (src/core/touch.ts): analog pedals and steering, merged in controls() */
+  readonly virt = { throttle: 0, brake: 0, handbrake: 0, steer: 0, steering: false };
 
   constructor(target: HTMLElement) {
     window.addEventListener('keydown', (e) => {
@@ -43,6 +51,20 @@ export class Input {
       e.preventDefault();
     }, { passive: false });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+
+  /** Virtual key from an on-screen button: press/release like a keyboard key (so hit() and down() see it). */
+  hold(code: string, on: boolean): void {
+    if (on) {
+      if (!this.keys.has(code)) this.pressed.add(code);
+      this.keys.add(code);
+    } else this.keys.delete(code);
+  }
+
+  /** Camera look from a touch drag (acts like a mouse drag). */
+  look(dx: number, dy: number): void {
+    this.mouseDX += dx;
+    this.mouseDY += dy;
   }
 
   down(code: string): boolean {
@@ -89,6 +111,11 @@ export class Input {
     let steer = this.steerKb;
     let handbrake = k.has('Space') ? 1 : 0;
     let clutch = k.has('ShiftLeft') ? 1 : 0;
+    const v = this.virt;
+    throttle = Math.max(throttle, v.throttle);
+    brake = Math.max(brake, v.brake);
+    handbrake = Math.max(handbrake, v.handbrake);
+    if (v.steering && Math.abs(v.steer) > Math.abs(steer)) steer = v.steer;
     const p = this.pad();
     if (p) {
       const dz = (v: number) => (Math.abs(v) < 0.08 ? 0 : (v - Math.sign(v) * 0.08) / 0.92);
