@@ -196,6 +196,14 @@ GIS decisions D1–D7 come from the earlier (Unreal-plan) session and still hold
 - **U5.7 Shadow map size is clamped** so cascades × size fit `MAX_TEXTURE_SIZE` (it halves down to 256). Legendary 4096 × 3 cascades would exceed 8192-limit GPUs.
 - **U5.8 Cross-axle test pit 1.2 m → 0.4 m.** It was sized for the leaf-sprung LC70. The taller Patrol with a stiff rear bar rolls into a 1.2 m hole, so the test now checks the locker, not a rollover.
 
+## U6 — Android APK (2026-11-21)
+
+- **U6.1 Capacitor, not a TWA / Bubblewrap.** A TWA needs the game hosted on a public HTTPS site; Capacitor packs the files inside the APK, so it is one offline file and free. The game code is unchanged (the WebView serves it from `https://localhost/`).
+- **U6.2 The Android SDK + JDK are build-time tools only**, like Node. Players install nothing but the APK, so the "no native installs" rule for running the game still holds.
+- **U6.3 Debug-signed APK.** Enough for sideloading to our own and friends' phones. A Play Store release would need a release keystore (not set up).
+- **U6.4 Landscape only (sensorLandscape)**, fullscreen, screen kept on: it is a driving game and the touch layout (U4) is designed for landscape.
+- **U6.5 Cleartext allowed** so the APK can reach `npm run server` on the LAN (`ws://<PC IP>:8787`) from the `https://localhost` WebView origin.
+
 ## Autonomous decisions (overnight run, no user available)
 
 1. Tool versions: Three.js 0.170, Vite 8, TypeScript 7, Vitest 5 (installed today's stable versions).

@@ -12,13 +12,17 @@
     "smoke": "node tests/smoke.mjs",
     "server": "node server/server.mjs",
     "share": "node Tools/Share/make_zip.mjs",
+    "apk": "node Tools/Apk/make_apk.mjs",
     "data": "uv run --directory Tools/GIS python ../Web/export_web.py"
   },
   "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "three": "^0.170.0",
     "ws": "^8.23.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
     "@types/node": "^26.6.6",
     "@types/three": "^0.170.0",
     "@types/ws": "^8.18.2",

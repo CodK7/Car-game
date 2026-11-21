@@ -1,0 +1,12 @@
+{
+  "appId": "com.wahibasands.offroad",
+  "appName": "Wahiba Sands",
+  "webDir": "release/apk-web",
+  "android": {
+    "allowMixedContent": true,
+    "backgroundColor": "#000000"
+  },
+  "server": {
+    "androidScheme": "https"
+  }
+}

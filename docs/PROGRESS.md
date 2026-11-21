@@ -19,6 +19,19 @@ Read with `DECISIONS.md`. Plan: `PROMPTS_Wahiba_WebGame.md` (Section A → B →
 | U3 — shareable zip | DONE | `npm run share` → `release/WahibaSands.zip` (34.7 MB), tested from a clean extract, 0 console errors |
 | U4 — settings + phone/tablet | DONE (no real phone tested) | 97 tests, smoke 5/5, `tests/measure_fpscap.mjs`, phone-size check in the Browser pane |
 | U5 — Patrol only, drift setup, Ultra/Legendary | DONE (Ultra/Legendary FPS unverified) | 90 tests, smoke 7/7, `tests/drift.test.ts` → `tests/tmp/drift_metrics.json`, `docs/evidence/u5_drift_hud.jpg` |
+| U6 — Android APK | DONE (not installed on a real phone) | 93 tests, `npm run apk` → `release/WahibaSands.apk` (38.0 MB), aapt badging OK, APK web build checked at 844×390 in the Browser pane |
+
+## U6 — Android APK (DONE, 2026-11-21)
+
+User request: make the project a single APK file for the phone.
+
+- **Capacitor 8.6.2** wraps the production build in an Android WebView app (`com.wahibasands.offroad`, "Wahiba Sands", minSdk 24, targetSdk 36). `android/` is committed; build outputs and the copied web assets are git-ignored.
+- `npm run apk` (`Tools/Apk/make_apk.mjs`): tsc → Vite build (mode `share`, so `public/local` is never probed or shipped) into `release/apk-web` → `cap sync android` → `gradlew assembleDebug` → `release/WahibaSands.apk`. Finds the SDK via ANDROID_HOME or `%LOCALAPPDATA%\Android\Sdk`, and the JDK via JAVA_HOME or `java` on PATH.
+- The activity is sensorLandscape, fullscreen (system bars hidden, swipe from the edge to show them), keeps the screen on, and allows cleartext so the LAN multiplayer server (`ws://`) can be reached.
+- All terrain data is inside the APK, so it plays offline. First Gradle run ≈ 2.5 min (downloads Gradle + plugins); later runs ≈ 5 s.
+
+**Evidence:** `aapt dump badging` shows the package, label and launch activity; `assets/public/index.html` and all 5 terrain files are in the APK, no `local/`. The same `release/apk-web` build served by `vite preview` at 844×390 (phone landscape): start screen → Start → driving on the dunes, 0 console errors.
+**Unverified:** install and FPS on a real Android phone (no device connected over adb, no emulator system image installed). Touch controls inside the Android WebView.
 
 ## U5 — Patrol only, drift / hajwala setup, Ultra + Legendary quality (DONE, 2026-11-19)
 
